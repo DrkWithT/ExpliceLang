@@ -1,0 +1,13 @@
+func main(): int {
+    const original: tuple[int, int] = (42, 24);
+    const x, y = original;
+
+    const reversed: tuple[int, int] = (y, x);
+    const x2, y2 = reversed;
+
+    if (x2 == y && y2 == x) {
+        return 0;
+    }
+
+    return 1;
+}

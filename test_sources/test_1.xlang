@@ -1,0 +1,13 @@
+func main(): int {
+    const a: int = 3;
+    const b: int = 5;
+    const c: int = a + b;
+    const d: int = b - a;
+    const e: int = (a + b) / 2;
+    const f: int = a * a + b * b;
+    const g: float = 22.625;
+
+    print_line_fmt("? ? ?", e, f, g);
+
+    return 0;
+}

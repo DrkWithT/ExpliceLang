@@ -1,0 +1,11 @@
+func main(): int {
+    const x: int = 24;
+    const y: int = 42;
+    const z: int = x + y;
+
+    if (z == 66) {
+        return 0;
+    }
+
+    return 1;
+}
