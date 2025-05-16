@@ -1,0 +1,12 @@
+add_executable(xlang_test_lexer)
+target_include_directories(xlang_test_lexer PUBLIC ${XLANG_INC_DIR})
+target_link_directories(xlang_test_lexer PRIVATE ${XLANG_LIB_DIR})
+target_sources(xlang_test_lexer PRIVATE xlang_test_lexer.cpp)
+target_link_libraries(xlang_test_lexer PRIVATE frontend)
+
+add_test(NAME lexer_test_0 COMMAND "$<TARGET_FILE:xlang_test_lexer>" "${XLANG_DEMO_DIR}/test_0.xlang")
+add_test(NAME lexer_test_1 COMMAND "$<TARGET_FILE:xlang_test_lexer>" "${XLANG_DEMO_DIR}/test_1.xlang")
+add_test(NAME lexer_test_2 COMMAND "$<TARGET_FILE:xlang_test_lexer>" "${XLANG_DEMO_DIR}/test_2.xlang")
+add_test(NAME lexer_test_3 COMMAND "$<TARGET_FILE:xlang_test_lexer>" "${XLANG_DEMO_DIR}/test_3.xlang")
+add_test(NAME lexer_test_4 COMMAND "$<TARGET_FILE:xlang_test_lexer>" "${XLANG_DEMO_DIR}/test_4.xlang")
+add_test(NAME lexer_test_5 COMMAND "$<TARGET_FILE:xlang_test_lexer>" "${XLANG_DEMO_DIR}/test_5.xlang")
