@@ -4,10 +4,11 @@
 ```bnf
 <literal> = <boolean> / <integer> / <identifier>
 <access> = <literal> ("::" <identifier> / <integer>)
-<unary> = "-"? <access>
-<term> = <unary> (("+" / "-") <unary>)*
-<factor> = <term> (("*" / "/") <term>)*
-<equality> = <factor> (("==" / "!=") <factor>)*
+<unary> = "-"? <access> / <call>
+<call> = <identifier> "(" (<expr> ",")* ")"
+<factor> = <unary> (("*" / "/") <unary>)*
+<term> = <factor> (("+" / "-") <factor>)*
+<equality> = <term> (("==" / "!=") <term>)*
 <compare> = <equality> (("<" / ">") <equality>)*
 <and> = <compare> ("&&" <compare>)*
 <or> = <and> ("||" <and>)*
