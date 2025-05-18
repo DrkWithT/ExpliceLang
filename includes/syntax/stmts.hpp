@@ -24,11 +24,12 @@ namespace XLang::Syntax {
     };
 
     struct VariableDecl : public Stmt {
+        std::any typing;
         Frontend::Token name;
         ExprPtr init_expr;
         bool readonly;
 
-        explicit VariableDecl(const Frontend::Token& var_name_, ExprPtr init_expr_, bool readonly_) noexcept;
+        explicit VariableDecl(std::any typing_, const Frontend::Token& var_name_, ExprPtr init_expr_, bool readonly_) noexcept;
 
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
@@ -43,11 +44,12 @@ namespace XLang::Syntax {
     };
 
     struct FunctionDecl : public Stmt {
+        std::any typing;
         std::vector<ArgDecl> args;
         Frontend::Token name;
         StmtPtr body;
 
-        FunctionDecl(const std::vector<ArgDecl>& args_, const Frontend::Token& name_, StmtPtr body_) noexcept;
+        FunctionDecl(std::any typing_, const std::vector<ArgDecl>& args_, const Frontend::Token& name_, StmtPtr body_) noexcept;
 
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;

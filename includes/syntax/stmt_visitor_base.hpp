@@ -19,7 +19,7 @@ namespace XLang::Syntax {
         virtual Result visit_function_decl(const FunctionDecl& stmt) = 0;
         virtual Result visit_expr_stmt(const ExprStmt& stmt) = 0;
         virtual Result visit_block(const Block& stmt) = 0;
-        virtual Result visit_return(const ExprStmt& stmt) = 0;
-        virtual Result visit_if(const ExprStmt& stmt) = 0;
+        virtual Result visit_return(const Return& stmt) = 0;
+        virtual Result visit_if(const If& stmt) = 0;
     };
 }
