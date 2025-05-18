@@ -39,8 +39,8 @@ namespace XLang::Syntax {
     };
 
     struct ArgDecl {
+        std::any type;
         Frontend::Token name;
-        Semantics::TypeTag type;
     };
 
     struct FunctionDecl : public Stmt {

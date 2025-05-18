@@ -21,14 +21,14 @@
 <comment> = "#" ... "#"
 <program> = <import>* <function-decl>+
 <import> = "import" <identifier> ";"
-<function-decl> = "func" <identifier> "(" <arg-list> ")" <type-specifier> <block>
-<arg-list> = (<arg> ",")*
+<function-decl> = "func" <identifier> <arg-list> ":" <type-specifier> <block>
+<arg-list> = "(" (<arg> ",")* ")"
 <arg> = <identifier> ":" <type-specifier>
-<type-specifier> = "bool" / "int" / "float"
+<type-specifier> = "bool" / "int" / "float" / "string"
 <block> = "{" <nestable-stmt>+ "}"
 <nestable-stmt> = <variable-decl> / <expr-stmt> / <return> / <if>
 <variable-decl> = ("let" / "const") <identifier> ":" <type-specifier> "=" <expr> ";"
 <expr-stmt> = <expr> ";"
 <return> = "return" <expr> ";"
-<if> = "if" "(" <expr> ")" <block>
+<if> = "if" "(" <expr> ")" <block> ("else" <block>)?
 ```
