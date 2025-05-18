@@ -6,6 +6,7 @@
 namespace XLang::Semantics {
     enum class OpTag : unsigned char {
         none,
+        assign,
         access,
         negate,
         multiply,
@@ -22,13 +23,15 @@ namespace XLang::Semantics {
 
     enum class ValuingTag : unsigned char {
         x_in_value, // anything mutable
-        x_out_value // primitive, constant, or read-only
+        x_out_value, // primitive, constant, or read-only
+        x_unknown_value
     };
 
     enum class TypeTag : unsigned char {
         x_type_bool,
         x_type_int,
         x_type_float,
+        x_type_string,
         x_type_unknown
     };
 

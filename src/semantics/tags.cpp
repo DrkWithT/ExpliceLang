@@ -8,6 +8,7 @@ namespace XLang::Semantics {
             "bool",
             "int",
             "float",
+            "string",
             "unknown"
         }; // quick and dirty mapping from type tags to names for comparisons...
 
