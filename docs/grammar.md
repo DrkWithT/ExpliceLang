@@ -3,9 +3,9 @@
 #### Expressions: (add tuples and arrays later!!)
 ```bnf
 <literal> = <boolean> / <integer> / <identifier>
-<access> = <literal> ("::" <identifier> / <integer>)
-<unary> = "-"? <access> / <call>
+<access> = <literal> ("::" <literal>)
 <call> = <identifier> "(" (<expr> ",")* ")"
+<unary> = "(" <expr> ")" / "-"? <access> / <call>
 <factor> = <unary> (("*" / "/") <unary>)*
 <term> = <factor> (("+" / "-") <factor>)*
 <equality> = <term> (("==" / "!=") <term>)*
@@ -26,8 +26,8 @@
 <arg> = <identifier> ":" <type-specifier>
 <type-specifier> = "bool" / "int" / "float"
 <block> = "{" <nestable-stmt>+ "}"
-<nestable-stmt> = <variable-declaration> / <expr-stmt> / <return> / <if>
-<variable-declaration> = ("let" / "const") <identifier> ":" <type-specifier> "=" <expr> ";"
+<nestable-stmt> = <variable-decl> / <expr-stmt> / <return> / <if>
+<variable-decl> = ("let" / "const") <identifier> ":" <type-specifier> "=" <expr> ";"
 <expr-stmt> = <expr> ";"
 <return> = "return" <expr> ";"
 <if> = "if" "(" <expr> ")" <block>
