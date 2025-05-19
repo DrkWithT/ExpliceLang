@@ -36,7 +36,11 @@ namespace XLang::Frontend {
     }
 
     void Parser::recover() {
-        while (!match_at(0, LexTag::semicolon)) {
+        while (!at_eof()) {
+            if (match_at(0, LexTag::semicolon)) {
+                break;
+            }
+
             consume();
         }
     }
@@ -270,12 +274,13 @@ namespace XLang::Frontend {
     }
 
     Syntax::StmtPtr Parser::parse_import() {
-        if (peek_lexeme(peek_at(0), m_lexer.view_source()) != "import") {
+        Token temp = peek_at(0);
+        consume();
+
+        if (peek_lexeme(temp, m_lexer.view_source()) != "import") {
             m_errors.emplace_back("Invalid keyword for expected import.", peek_at(0));
             throw std::runtime_error {"SYNTAX ERROR\n"};
         }
-
-        consume();
 
         Token unit_name = peek_at(0);
         consume(LexTag::identifier);
@@ -285,12 +290,13 @@ namespace XLang::Frontend {
     }
 
     Syntax::StmtPtr Parser::parse_function_decl() {
-        if (peek_lexeme(peek_at(0), m_lexer.view_source()) != "func") {
+        Token temp = peek_at(0);
+        consume();
+
+        if (peek_lexeme(temp, m_lexer.view_source()) != "func") {
             m_errors.emplace_back("Invalid keyword for expected function decl.", peek_at(0));
             throw std::runtime_error {"SYNTAX ERROR\n"};
         }
-
-        consume();
 
         Token func_name = peek_at(0);
         consume(LexTag::identifier);
@@ -443,7 +449,11 @@ namespace XLang::Frontend {
 
 
     Parser::Parser(std::string_view source)
-    : m_lexer {source}, m_window {}, m_errors {} {}
+    : m_lexer {source}, m_window {}, m_errors {} {
+        for (auto token_preload_count = 0; token_preload_count < m_peek_count; ++token_preload_count) {
+            m_window.emplace_back(m_lexer());
+        }
+    }
 
     ParseDump Parser::operator()() {
         return parse_program();
