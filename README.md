@@ -14,3 +14,12 @@ X Lang is my first ever register-bytecode-based language. The goal of this langu
  - Concise and clear code helps maintainability.
  - There is only one proper way to do something.
  - It just works.
+
+### More Docs:
+ - [Grammar](./docs/grammar.md)
+ - [VM](./docs/vm.md)
+
+### Roadmap:
+ - Complete control-flow graph pass for AST.
+ - Complete emit pass for graph.
+ - Create VM and runtime wrappers...
