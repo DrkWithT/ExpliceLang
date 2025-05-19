@@ -1,6 +1,5 @@
 #pragma once
 
-#include <type_traits>
 #include <unordered_map>
 #include <vector>
 #include <variant>
@@ -18,8 +17,8 @@ namespace XLang::Codegen {
 
     /// @note Represents up to two child ids per node.
     struct ChildPair {
-        int left;
-        int right;
+        int first;
+        int second;
     };
 
     /// @note Represents a non-forking sequence of instructions.
@@ -36,36 +35,29 @@ namespace XLang::Codegen {
 
     /// @note Models control-flow per function.
     class FlowGraph {
-    public:
-        template <bool IsConstSelf, typename T>
-        struct rooty_t {
-            using type = T&;
-        };
-
-        template <typename T>
-        struct rooty_t <true, T> {
-            using type = const T&;
-        };
-
     private:
         /// @note All nodes are stored in adjacency lists but vectors are cache-friendlier.
         std::vector<NodeUnion> m_items;
-        std::vector<std::vector<int>> m_links;
+
+        [[nodiscard]] bool validate_id(int id) const noexcept;
 
     public:
         FlowGraph();
 
-        constexpr auto root(this auto&& self) noexcept -> rooty_t<std::is_const_v<std::remove_reference_t<decltype(self)>>, NodeUnion> {
-            return self.m_items[0];
-        }
+        NodeUnion& node_at(int id) & noexcept;
+        const NodeUnion& node_at(int id) const& noexcept;
 
         [[nodiscard]] constexpr int add_node(std::same_as<NodeUnion> auto&& node) {
             m_items.emplace_back(node);
-            m_links.push_back({});
         }
 
         [[nodiscard]] ChildPair find_neighbors(int source_id);
-        [[nodiscard]] bool connect_neighbor(int target_id, int other_id);
+
+        /// @note Only use for Unit nodes.
+        [[nodiscard]] bool connect_neighbor(int target_id, int next_id);
+
+        /// @note Only use for Juncture nodes.
+        [[nodiscard]] bool connect_neighbor(int target_id, int left_id, int right_id);
 
         template <template <typename, typename> typename Pass, typename Result, typename Policy>
         Result take_pass(Pass<Result, Policy>& pass) {
