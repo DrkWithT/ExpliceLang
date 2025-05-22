@@ -20,6 +20,7 @@ namespace XLang::Syntax {
         bool is_expr_stmt() const noexcept override;
         std::any possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
+        std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };
 
     struct VariableDecl : public Stmt {
@@ -35,6 +36,7 @@ namespace XLang::Syntax {
         bool is_expr_stmt() const noexcept override;
         std::any possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
+        std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };
 
     struct ArgDecl {
@@ -55,6 +57,7 @@ namespace XLang::Syntax {
         bool is_expr_stmt() const noexcept override;
         std::any possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
+        std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };
 
     struct ExprStmt : public Stmt {
@@ -67,6 +70,7 @@ namespace XLang::Syntax {
         bool is_expr_stmt() const noexcept override;
         std::any possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
+        std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };
 
     struct Block : public Stmt {
@@ -79,6 +83,7 @@ namespace XLang::Syntax {
         bool is_expr_stmt() const noexcept override;
         std::any possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
+        std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };
 
     struct Return : public Stmt {
@@ -91,6 +96,7 @@ namespace XLang::Syntax {
         bool is_expr_stmt() const noexcept override;
         std::any possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
+        std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };
 
     struct If : public Stmt {
@@ -105,5 +111,6 @@ namespace XLang::Syntax {
         bool is_expr_stmt() const noexcept override;
         std::any possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
+        std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };
 }

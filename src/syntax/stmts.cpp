@@ -25,6 +25,10 @@ namespace XLang::Syntax {
         visitor.visit_import(*this);
     }
 
+    std::any Import::accept_visitor(StmtVisitor<std::any>& visitor) const {
+        return visitor.visit_import(*this);
+    }
+
 
     VariableDecl::VariableDecl(std::any typing_, const Frontend::Token& name_, ExprPtr init_expr_, bool readonly_) noexcept
     : typing {typing_}, name {name_}, init_expr {std::move(init_expr_)}, readonly {readonly_} {}
@@ -49,6 +53,10 @@ namespace XLang::Syntax {
         visitor.visit_variable_decl(*this);
     }
 
+    std::any VariableDecl::accept_visitor(StmtVisitor<std::any>& visitor) const {
+        return visitor.visit_variable_decl(*this);
+    }
+
 
     FunctionDecl::FunctionDecl(std::any typing_, const std::vector<ArgDecl>& args_, const Frontend::Token& name_, StmtPtr body_) noexcept
     : typing {typing_}, args {args_}, name {name_}, body {std::move(body_)} {}
@@ -71,6 +79,10 @@ namespace XLang::Syntax {
 
     void FunctionDecl::accept_visitor(StmtVisitor<void>& visitor) const {
         visitor.visit_function_decl(*this);
+    }
+
+    std::any FunctionDecl::accept_visitor(StmtVisitor<std::any>& visitor) const {
+        return visitor.visit_function_decl(*this);
     }
 
 
@@ -99,6 +111,10 @@ namespace XLang::Syntax {
         visitor.visit_expr_stmt(*this);
     }
 
+    std::any ExprStmt::accept_visitor(StmtVisitor<std::any>& visitor) const {
+        return visitor.visit_expr_stmt(*this);
+    }
+
 
     Block::Block(std::vector<StmtPtr> stmts_) noexcept
     : stmts {std::move(stmts_)} {}
@@ -121,6 +137,10 @@ namespace XLang::Syntax {
 
     void Block::accept_visitor(StmtVisitor<void>& visitor) const {
         visitor.visit_block(*this);
+    }
+
+    std::any Block::accept_visitor(StmtVisitor<std::any>& visitor) const {
+        return visitor.visit_block(*this);
     }
 
 
@@ -149,6 +169,10 @@ namespace XLang::Syntax {
         visitor.visit_return(*this);
     }
 
+    std::any Return::accept_visitor(StmtVisitor<std::any>& visitor) const {
+        return visitor.visit_return(*this);
+    }
+
 
     If::If(ExprPtr test_, StmtPtr truthy_body_, StmtPtr falsy_body_) noexcept
     : test {std::move(test_)}, truthy_body {std::move(truthy_body_)}, falsy_body {std::move(falsy_body_)} {};
@@ -171,5 +195,9 @@ namespace XLang::Syntax {
 
     void If::accept_visitor(StmtVisitor<void>& visitor) const {
         visitor.visit_if(*this);
+    }
+
+    std::any If::accept_visitor(StmtVisitor<std::any>& visitor) const {
+        return visitor.visit_if(*this);
     }
 }
