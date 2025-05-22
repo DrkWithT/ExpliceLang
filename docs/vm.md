@@ -15,6 +15,7 @@
  - **NOOP**
  - **PUSH** value-id
  - **POP** pop-n
+ - **PEEK** base-offset
  - **LOAD_CONST** const-id
  - **MAKE_ARRAY** (top ... top-n)
  - **MAKE_TUPLE** (top ... top-n)
@@ -32,6 +33,8 @@
  - **LOG_OR**
  - **JUMP** offset-id
  - **JUMP_IF** offset-id, src-reg
+ - **ENTER**
+    - Places a NULL placeholder on the stack similar to an EBP marker on x86.
  - **RET**
     - Removes the stack frame's items on the stack until a placeholder NULL is reached (like the base pointer in ASM). Then replaces NULL with the result.
  - **CALL** func-id

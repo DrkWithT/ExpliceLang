@@ -7,7 +7,9 @@ func main(): int {
     const f: int = a * a + b * b;
     const g: float = 22.625;
 
-    print_line_fmt("? ? ?", e, f, g,);
+    print_number(e,);
+    print_number(f,);
+    print_number(g,);
 
     return 0;
 }
