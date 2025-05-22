@@ -1,5 +1,6 @@
 #pragma once
 
+#include <any>
 #include <vector>
 #include <string>
 #include <string_view>
@@ -48,7 +49,7 @@ namespace XLang::Semantics {
     };
 
     struct CallableType {
-        std::vector<TypeTag> item_tags;
+        std::vector<std::any> item_tags;
         TypeTag result_tag;
     };
 

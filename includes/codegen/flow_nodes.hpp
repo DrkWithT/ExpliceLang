@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 #include <variant>
@@ -47,17 +48,22 @@ namespace XLang::Codegen {
         NodeUnion& node_at(int id) & noexcept;
         const NodeUnion& node_at(int id) const& noexcept;
 
-        [[nodiscard]] constexpr int add_node(std::same_as<NodeUnion> auto&& node) {
+        template <typename NodeBoxType>
+        [[maybe_unused]] constexpr int add_node(NodeBoxType&& node) {
+            const int next_node_id = m_items.size();
+
             m_items.emplace_back(node);
+
+            return next_node_id;
         }
 
         [[nodiscard]] ChildPair find_neighbors(int source_id);
 
         /// @note Only use for Unit nodes.
-        [[nodiscard]] bool connect_neighbor(int target_id, int next_id);
+        [[maybe_unused]] bool connect_neighbor(int target_id, int next_id);
 
         /// @note Only use for Juncture nodes.
-        [[nodiscard]] bool connect_neighbor(int target_id, int left_id, int right_id);
+        [[maybe_unused]] bool connect_neighbor(int target_id, int left_id, int right_id);
 
         template <template <typename, typename> typename Pass, typename Result, typename Policy>
         Result take_pass(Pass<Result, Policy>& pass) {
