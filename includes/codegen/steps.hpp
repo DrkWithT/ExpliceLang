@@ -4,9 +4,10 @@
 
 namespace XLang::Codegen {
     enum class Region {
-        temp_register,
+        consts,
         temp_stack,
         obj_heap,
+        routines,
         none
     };
 
