@@ -91,7 +91,7 @@ namespace XLang::Frontend {
         Token callee_id = peek_at(0);
         consume(LexTag::identifier);
 
-        auto call_source = std::make_unique<Syntax::Literal>(callee_id, Semantics::TypeTag::x_type_unknown, true);
+        auto call_source = get_lexeme(callee_id, m_lexer.view_source());
         std::vector<Syntax::ExprPtr> call_args;
 
         consume(LexTag::left_paren);
@@ -239,8 +239,7 @@ namespace XLang::Frontend {
 
         if (match_at(0, LexTag::symbol_assign)) {
             consume();
-            /// @note Assignment expr. evaluates rhs initializer 1st. By Binary node visitation which goes left then right, this should work.
-            assign_root = std::make_unique<Syntax::Binary>(parse_or(), std::move(assign_root), Semantics::OpTag::assign);
+            assign_root = std::make_unique<Syntax::Binary>(std::move(assign_root), parse_or(), Semantics::OpTag::assign);
         }
 
         return assign_root;
