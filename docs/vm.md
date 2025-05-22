@@ -1,46 +1,39 @@
 ### XLang Virtual Machine
 
 #### High-Level Overview
- - Register based virtual architecture with stack(s).
-    - 16 general purpose registers
-    - 4 special registers:
+ - Stack based virtual architecture with stack(s).
+    - Special registers:
         - **R_IP** 2 bytes
         - **R_ERR** 1 byte: (see error codes)
-        - **R_FLAG** 1 byte: 0 or 1 for F/T
-        - **R_BASE** 2 bytes: call-frame-id
-    - A temporary stack of objects.
-    - A "heap" for complex objects.
-    - A call frame stack & instruction storage.
- - Contains a periodic, pausing GC.
+    - A N-peekable stack of operands
+    - A "heap" for _aggregate_ objects i.e strings, tuples, and arrays
+    - A call frame stack & instruction store
+ - Contains a periodic, pausing GC
 
 #### Instructions
  - **HALT**
  - **NOOP**
- - **PUSH_TEMP** src-id / src-reg
- - **POP_TEMP** pops-n
- - **PUT_CONST** dest-id / dest-reg, const-literal / const-id
- - **PUT_VALUE** dest-id / dest-reg, const-literal / value-id
- - **MAKE_ARRAY** dest-id / dest-reg, item-type-id, item-n
- - **MAKE_TUPLE** dest-id / dest-reg, tuple-type-id
- - **GET_SLOT** dest-id / dest-reg, obj-id, field-id
- - **SET_SLOT** dest-id / dest-reg, field-id, src-id / src-reg
- - **GET_ITEM** dest-id / dest-reg, src-tuple-id, tuple-index
- - **ADD_INT** dest-id / dest-reg, arg-0
- - **ADD_FLOAT** dest-id / dest-reg, arg-0
- - **SUB_INT** dest-id / dest-reg, arg-0
- - **SUB_FLOAT** dest-id / dest-reg, arg-0
- - **MUL_INT** dest-id / dest-reg, arg-0
- - **MUL_FLOAT** dest-id / dest-reg, arg-0
- - **DIV_INT** dest-id / dest-reg, arg-0
- - **DIV_FLOAT** dest-id / dest-reg, arg-0
- - **CMP_EQ** dest-id / dest-reg, dest-id / dest-reg
- - **CMP_NOT_EQ** dest-id / dest-reg, dest-id / dest-reg
- - **CMP_GT** dest-id / dest-reg, dest-id / dest-reg
- - **CMP_LT** dest-id / dest-reg, dest-id / dest-reg
+ - **PUSH** value-id
+ - **POP** pop-n
+ - **LOAD_CONST** const-id
+ - **MAKE_ARRAY** (top ... top-n)
+ - **MAKE_TUPLE** (top ... top-n)
+ - **ACCESS_FIELD** object-id, key-id
+ - **NEGATE**
+ - **ADD**
+ - **SUB**
+ - **MUL**
+ - **DIV**
+ - **CMP_EQ**
+ - **CMP_NOT_EQ**
+ - **CMP_GT**
+ - **CMP_LT**
+ - **LOG_AND**
+ - **LOG_OR**
  - **JUMP** offset-id
- - **JUMP_IF** offset-id
- - **CREATE_FRAME** func-id, slot-n
- - **LEAVE_FRAME** func-id, slot-n
+ - **JUMP_IF** offset-id, src-reg
+ - **RET**
+    - Removes the stack frame's items on the stack until a placeholder NULL is reached (like the base pointer in ASM). Then replaces NULL with the result.
  - **CALL** func-id
  - **CALL_NATIVE** unit-id, func-id
 
@@ -48,7 +41,7 @@
  - **0** normal
  - **1** arithmetic error
  - **2** access error
- - **3** temporary stack error
+ - **3** value stack error
  - **4** call stack error
  - **5** heap error
  - **6** memory exceeded error
