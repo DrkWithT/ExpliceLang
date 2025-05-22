@@ -2,7 +2,7 @@ add_subdirectory(frontend)
 add_subdirectory(syntax)
 add_subdirectory(semantics)
 add_subdirectory(codegen)
-# add_subdirectory(vm)
+# add_subdirectory(vm) # todo
 
 add_executable(xlang)
 target_include_directories(xlang PUBLIC ${XLANG_INC_DIR})

@@ -23,3 +23,11 @@ add_test(NAME parser_test_2 COMMAND "$<TARGET_FILE:xlang_test_parser>" "${XLANG_
 add_test(NAME parser_test_3 COMMAND "$<TARGET_FILE:xlang_test_parser>" "${XLANG_DEMO_DIR}/test_3.xlang")
 add_test(NAME parser_test_4 COMMAND "$<TARGET_FILE:xlang_test_parser>" "${XLANG_DEMO_DIR}/test_4.xlang")
 add_test(NAME parser_test_5 COMMAND "$<TARGET_FILE:xlang_test_parser>" "${XLANG_DEMO_DIR}/test_5.xlang")
+
+add_executable(xlang_test_codegen)
+target_link_directories(xlang_test_codegen PRIVATE "${XLANG_LIB_DIR}")
+target_include_directories(xlang_test_codegen PUBLIC "${XLANG_INC_DIR}")
+target_sources(xlang_test_codegen PRIVATE xlang_test_codegen.cpp)
+add_test(NAME codegen_test_0 COMMAND "$<TARGET_FILE:xlang_test_codegen>" "${XLANG_DEMO_DIR}/test_0.xlang")
+# TODO: add codegen tests 1, 3, 4, 5 later!
+add_test(NAME codegen_test_2 COMMAND "$<TARGET_FILE:xlang_test_codegen>" "${XLANG_DEMO_DIR}/test_2.xlang")
