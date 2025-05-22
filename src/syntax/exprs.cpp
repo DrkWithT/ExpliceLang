@@ -82,8 +82,8 @@ namespace XLang::Syntax {
     }
 
 
-    Call::Call(std::vector<ExprPtr> args_, ExprPtr inner_) noexcept
-    : args {std::move(args_)}, inner {std::move(inner_)} {}
+    Call::Call(std::vector<ExprPtr> args_, std::string func_name_) noexcept
+    : args {std::move(args_)}, func_name {std::move(func_name_)} {}
 
     bool Call::yields_value() const noexcept {
         return true;

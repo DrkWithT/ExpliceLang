@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <vector>
 #include "frontend/token.hpp"
 #include "semantics/tags.hpp"
@@ -51,9 +52,9 @@ namespace XLang::Syntax {
 
     struct Call : public Expr {
         std::vector<ExprPtr> args;
-        ExprPtr inner;
+        std::string func_name;
 
-        Call(std::vector<ExprPtr> args_, ExprPtr inner_) noexcept;
+        Call(std::vector<ExprPtr> args_, std::string func_name_) noexcept;
 
         bool yields_value() const noexcept override;
         Semantics::ValuingTag value_group() const noexcept override;

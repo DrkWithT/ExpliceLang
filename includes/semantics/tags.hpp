@@ -1,7 +1,8 @@
 #pragma once
 
-// #include <vector>
+#include <vector>
 #include <string>
+#include <string_view>
 
 namespace XLang::Semantics {
     enum class OpTag : unsigned char {
@@ -35,9 +36,25 @@ namespace XLang::Semantics {
         x_type_unknown
     };
 
-    [[nodiscard]] std::string create_type_name(TypeTag single_tag);
+    struct NullType {};
 
-    // [[nodiscard]] std::string create_type_name(const std::vector<TypeTag>& tupled_tags);
+    struct ArrayType {
+        TypeTag item_tag;
+        int n;
+    };
 
-    // [[nodiscard]] std::string create_type_name(TypeTag item_tag, int count);
+    struct TupleType {
+        std::vector<TypeTag> item_tags;
+    };
+
+    struct CallableType {
+        std::vector<TypeTag> item_tags;
+        TypeTag result_tag;
+    };
+
+    [[nodiscard]] std::string_view create_type_name(TypeTag single_tag);
+
+    [[nodiscard]] std::string create_type_name(const ArrayType& array_tag);
+
+    [[nodiscard]] std::string create_type_name(const TupleType& tuple_tag);
 }

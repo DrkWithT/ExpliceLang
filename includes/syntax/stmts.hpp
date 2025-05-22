@@ -3,7 +3,6 @@
 #include <memory>
 #include <vector>
 #include "frontend/token.hpp"
-#include "semantics/tags.hpp"
 #include "syntax/exprs.hpp"
 #include "syntax/stmt_visitor_base.hpp"
 #include "syntax/stmt_base.hpp"
