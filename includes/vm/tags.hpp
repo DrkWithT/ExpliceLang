@@ -27,7 +27,8 @@ namespace XLang::VM {
         xop_enter,
         xop_ret,
         xop_call,
-        xop_call_native
+        xop_call_native,
+        last
     };
 
     enum class Errcode : unsigned char {

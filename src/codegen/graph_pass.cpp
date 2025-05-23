@@ -158,6 +158,10 @@ namespace XLang::Codegen {
     }
 
     void GraphPass::commit_nodes_to_graph(int current_func_id, bool all_decls_done) {
+        if (!m_graph) {
+            return;
+        }
+
         /// @note Use BFS to take, add, and connect to children for each control flow node. TODO!
         const int nodes_n = m_nodes.size();
 
@@ -193,10 +197,10 @@ namespace XLang::Codegen {
 
         /// 5. Commit graph to FlowStore.
         m_result->operator[](current_func_id) = std::move(*m_graph);
-        delete m_graph;
+        m_nodes.clear();
 
         if (!all_decls_done) {
-            m_graph = new FlowGraph;
+            m_graph = std::make_unique<FlowGraph>();
         }
     }
 
@@ -523,7 +527,7 @@ namespace XLang::Codegen {
         return {};
     }
 
-    FlowStore* GraphPass::process([[maybe_unused]] const std::vector<Syntax::StmtPtr>& ast) {
+    std::unique_ptr<FlowStore> GraphPass::process([[maybe_unused]] const std::vector<Syntax::StmtPtr>& ast) {
         const auto decls_n = static_cast<int>(ast.size());
 
         for (auto func_decl_idx = 0; func_decl_idx < decls_n; ++func_decl_idx) {
@@ -534,7 +538,6 @@ namespace XLang::Codegen {
             commit_nodes_to_graph(generated_func_id, func_decl_idx == decls_n - 1);
         }
 
-        FlowStore* temp = std::exchange(m_result, nullptr);
-        return temp;
+        return {std::move(m_result)};
     }
 }

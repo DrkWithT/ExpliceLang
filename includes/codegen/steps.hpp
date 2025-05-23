@@ -8,7 +8,8 @@ namespace XLang::Codegen {
         temp_stack,
         obj_heap,
         routines,
-        none
+        none,
+        last
     };
 
     struct Locator {

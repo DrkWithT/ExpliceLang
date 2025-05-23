@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <any>
 #include <unordered_map>
 #include <variant>
@@ -52,10 +53,10 @@ namespace XLang::Codegen {
         std::vector<NodeUnion> m_nodes;
 
         /// @note refers current building flow graph
-        FlowGraph* m_graph;
+        std::unique_ptr<FlowGraph> m_graph;
 
         /// @note holds result pointer to return
-        FlowStore* m_result;
+        std::unique_ptr<FlowStore> m_result;
 
         std::string_view m_old_src;
 
@@ -101,6 +102,6 @@ namespace XLang::Codegen {
         [[nodiscard]] std::any visit_return(const Syntax::Return& stmt) override;
         [[nodiscard]] std::any visit_if(const Syntax::If& stmt) override;
 
-        [[nodiscard]] FlowStore* process(const std::vector<Syntax::StmtPtr>& ast);
+        [[nodiscard]] std::unique_ptr<FlowStore> process(const std::vector<Syntax::StmtPtr>& ast);
     };
 }
