@@ -2,8 +2,8 @@
 #include <print>
 #include "frontend/files.hpp"
 #include "frontend/parser.hpp"
-#include "codegen/flow_nodes.hpp"
 #include "codegen/graph_pass.hpp"
+#include "codegen/graph_printer.hpp"
 
 using namespace XLang;
 
@@ -23,14 +23,12 @@ using namespace XLang;
         return false;
     }
 
+    Codegen::FlowGraphPrinter printer;
     Codegen::GraphPass ctrl_flow_graph {source_view};
-    Codegen::FlowStore* graph = ctrl_flow_graph.process(parse_result.decls);
+    auto graph_ptr = ctrl_flow_graph.process(parse_result.decls);
 
-    /// Print control flow graph (I needed a nullable reference to a dynamically constructed control flow graph)
-    /// TODO: refactor graph generator to use unique_ptr::reset() for result.
-    /// TODO: create graph printer.
+    printer(*graph_ptr);
 
-    delete graph;
     return true;
 }
 
