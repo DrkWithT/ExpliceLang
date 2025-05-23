@@ -24,7 +24,9 @@ namespace XLang::Frontend {
         Lexer m_lexer;
         std::vector<Token> m_window;
         std::vector<ParseError> m_errors;
+        int m_strikes;
         static constexpr int m_peek_count = 4;
+        static constexpr int m_max_strikes = 5;
 
         [[nodiscard]] constexpr Token peek_at(int forward_offset) const {
             return m_window.at(forward_offset);

@@ -1,3 +1,4 @@
+#include <iostream>
 #include <utility>
 #include <stdexcept>
 #include "frontend/parser.hpp"
@@ -9,17 +10,19 @@ namespace XLang::Frontend {
 
         Token temp;
 
-        while (temp.tag != LexTag::eof) {
+        do {
             temp = m_lexer();
 
             if (temp.tag == LexTag::spaces || temp.tag == LexTag::comment) {
+                std::cout << "Parser::advance(...) --> continue;\n";
                 continue;
             }
 
             break;
-        }
-
+        } while (true);
+        
         m_window.emplace_back(temp);
+        std::cout << "Parser::advance(...) --> m_window.emplace_back(temp);\n";
     }
 
     void Parser::consume() {
@@ -27,8 +30,13 @@ namespace XLang::Frontend {
     }
 
     void Parser::consume(LexTag tag) {
+        if (match_at(0, LexTag::spaces, LexTag::comment)) {
+            advance();
+        }
+
         if (match_at(0, tag)) {
             advance();
+            return;
         }
 
         m_errors.emplace_back("Unexpected token.", peek_at(0));
@@ -36,8 +44,10 @@ namespace XLang::Frontend {
     }
 
     void Parser::recover() {
+        std::cout << "recover(...)\n";
         while (!at_eof()) {
             if (match_at(0, LexTag::semicolon)) {
+                consume();
                 break;
             }
 
@@ -248,20 +258,11 @@ namespace XLang::Frontend {
     ParseDump Parser::parse_program() {
         std::vector<Syntax::StmtPtr> top_stmts;
 
-        /// @note Begin parsing through top imports... This is required by the grammar rules to simplify the eventual handling of imports before any function resolving and evaluation at runtime.
-        while (!at_eof()) {
+        while (!at_eof() && m_strikes <= m_max_strikes) {
             try {
-                top_stmts.emplace_back(parse_import());
+                top_stmts.emplace_back(parse_top_stmt());
             } catch ([[maybe_unused]] const std::runtime_error& parse_oops) {
-                recover();
-            }
-        }
-
-        /// @note Also as mandated by the grammar, parse any function declarations coming after imports.
-        while (!at_eof()) {
-            try {
-                top_stmts.emplace_back(parse_function_decl());
-            } catch ([[maybe_unused]] const std::runtime_error& parse_oops_2) {
+                ++m_strikes;
                 recover();
             }
         }
@@ -272,7 +273,23 @@ namespace XLang::Frontend {
         };
     }
 
+    Syntax::StmtPtr Parser::parse_top_stmt() {
+        auto start_keyword = Frontend::peek_lexeme(peek_at(0), m_lexer.view_source());
+
+        if (start_keyword == "import") {
+            std::cout << "parse_top_stmt(...) --> import\n";
+            return parse_import();
+        } else if (start_keyword == "func") {
+            std::cout << "parse_top_stmt(...) --> func-decl\n";
+            return parse_function_decl();
+        }
+
+        m_errors.emplace_back("Invalid keyword for expected top-level statement e.g import, func-decl.", peek_at(0));
+        throw std::runtime_error {"SYNTAX ERROR\n"};
+    }
+
     Syntax::StmtPtr Parser::parse_import() {
+        std::cout << "parse_import(...)\n";
         Token temp = peek_at(0);
         consume();
 
@@ -289,7 +306,9 @@ namespace XLang::Frontend {
     }
 
     Syntax::StmtPtr Parser::parse_function_decl() {
+        std::cout << "parse_function_decl(...)\n";
         Token temp = peek_at(0);
+        std::cout << "parse_function_decl(...) --> consume() call 1\n";
         consume();
 
         if (peek_lexeme(temp, m_lexer.view_source()) != "func") {
@@ -298,9 +317,12 @@ namespace XLang::Frontend {
         }
 
         Token func_name = peek_at(0);
+        std::cout << "parse_function_decl(...) --> consume() call 2\n";
         consume(LexTag::identifier);
 
+        std::cout << "... parse_arg_list(...)\n";
         std::vector<Syntax::ArgDecl> argument_decls = parse_arg_list();
+        std::cout << "parse_function_decl(...) --> consume() call 3\n";
         consume(LexTag::colon);
 
         std::any func_return_type = parse_type_specifier();
@@ -311,6 +333,7 @@ namespace XLang::Frontend {
     }
 
     std::vector<Syntax::ArgDecl> Parser::parse_arg_list() {
+        std::cout << "parse_arg_list(...)\n";
         consume(LexTag::left_paren);
 
         std::vector<Syntax::ArgDecl> argument_decls;
@@ -336,6 +359,7 @@ namespace XLang::Frontend {
     }
 
     std::any Parser::parse_type_specifier() {
+        std::cout << "parse_type_specifier(...)\n";
         if (!match_at(0, LexTag::type_specifier)) {
             m_errors.emplace_back("Invalid token for type specifier.", peek_at(0));
             throw std::runtime_error {"SYNTAX ERROR\n"};
@@ -362,6 +386,7 @@ namespace XLang::Frontend {
     }
 
     Syntax::StmtPtr Parser::parse_block() {
+        std::cout << "parse_block(...)\n";
         consume(LexTag::left_brace);
 
         std::vector<Syntax::StmtPtr> block_stmts;
@@ -379,6 +404,7 @@ namespace XLang::Frontend {
     }
 
     Syntax::StmtPtr Parser::parse_nestable_stmt() {
+        std::cout << "parse_nestable_stmt(...)\n";
         auto starting_keyword = peek_lexeme(peek_at(0), m_lexer.view_source());
 
         if (starting_keyword == "let" || starting_keyword == "const") {
@@ -393,9 +419,8 @@ namespace XLang::Frontend {
     }
 
     Syntax::StmtPtr Parser::parse_variable_decl() {
+        std::cout << "parse_variable_decl(...)\n";
         auto var_pre_mark = peek_lexeme(peek_at(0), m_lexer.view_source());
-        consume();
-
         auto var_is_readonly = var_pre_mark == "const";
         consume();
 
@@ -413,13 +438,15 @@ namespace XLang::Frontend {
     }
 
     Syntax::StmtPtr Parser::parse_expr_stmt() {
-        auto inner_expr = parse_or();
+        std::cout << "parse_expr_stmt(...)\n";
+        auto inner_expr = parse_assign();
         consume(LexTag::semicolon);
 
         return std::make_unique<Syntax::ExprStmt>(std::move(inner_expr));
     }
 
     Syntax::StmtPtr Parser::parse_return() {
+        std::cout << "parse_return(...)\n";
         consume(LexTag::keyword);
 
         auto result_expr = parse_or();
@@ -429,6 +456,7 @@ namespace XLang::Frontend {
     }
 
     Syntax::StmtPtr Parser::parse_if() {
+        std::cout << "parse_if(...)\n";
         consume();
 
         consume(LexTag::left_paren);
@@ -448,9 +476,10 @@ namespace XLang::Frontend {
 
 
     Parser::Parser(std::string_view source)
-    : m_lexer {source}, m_window {}, m_errors {} {
+    : m_lexer {source}, m_window {}, m_errors {}, m_strikes {0} {
         for (auto token_preload_count = 0; token_preload_count < m_peek_count; ++token_preload_count) {
             m_window.emplace_back(m_lexer());
+            std::cout << "Parser::ctor(): pre-loaded token with tag = " << static_cast<int>(m_window.back().tag) << '\n';
         }
     }
 
