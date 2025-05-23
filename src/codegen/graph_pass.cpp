@@ -162,7 +162,6 @@ namespace XLang::Codegen {
             return;
         }
 
-        /// @note Use BFS to take, add, and connect to children for each control flow node. TODO!
         const int nodes_n = m_nodes.size();
 
         for (int node_i = 0; node_i < nodes_n; ++node_i) {
@@ -225,7 +224,7 @@ namespace XLang::Codegen {
             if (op == Semantics::OpTag::add) return VM::Opcode::xop_add;
             else if (op == Semantics::OpTag::subtract) return VM::Opcode::xop_sub;
             else if (op == Semantics::OpTag::multiply) return VM::Opcode::xop_mul;
-            else if (op == Semantics::OpTag::multiply) return VM::Opcode::xop_div;
+            else if (op == Semantics::OpTag::divide) return VM::Opcode::xop_div;
             return VM::Opcode::xop_noop;
         };
 
@@ -304,7 +303,7 @@ namespace XLang::Codegen {
 
 
     GraphPass::GraphPass(std::string_view old_source)
-    : m_heap_all {}, m_current_name_map {}, m_global_func_map {}, m_nodes {}, m_result {new FlowStore {}}, m_old_src {old_source} {}
+    : m_heap_all {}, m_current_name_map {}, m_global_func_map {}, m_const_map {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source} {}
 
     std::any GraphPass::visit_literal(const Syntax::Literal& expr) {
         const auto primitive_tag = std::any_cast<Semantics::TypeTag>(expr.type_tagging());
@@ -434,6 +433,10 @@ namespace XLang::Codegen {
 
     std::any GraphPass::visit_function_decl(const Syntax::FunctionDecl& stmt) {
         auto func_name = Frontend::peek_lexeme(stmt.name, m_old_src);
+        place_node(Unit {
+            .steps = {},
+            .next = dud_offset
+        });
 
         /// 1. Enter call frame of function
         place_step(NonaryStep {
@@ -458,20 +461,22 @@ namespace XLang::Codegen {
             .region = Region::routines,
             .id = func_id
         };
+        leave_record();
 
         return func_id;
     }
 
     std::any GraphPass::visit_expr_stmt(const Syntax::ExprStmt& stmt) {
-        stmt.inner->accept_visitor(*this);
-        place_step(NonaryStep {
-            .op = VM::Opcode::xop_pop
-        });
+        auto inner_result = stmt.inner->accept_visitor(*this);
+
+        // place_step(NonaryStep {
+        //     .op = VM::Opcode::xop_pop
+        // });
 
         return {}; // TODO
     }
 
-    std::any GraphPass::visit_block([[maybe_unused]] const Syntax::Block& stmt) {
+    std::any GraphPass::visit_block(const Syntax::Block& stmt) {
         // From an IF statement, the condition will still branch the control flow into 2 children, but 2 children have the same continuation of its nested block, but that afterward-fragment is a new node too.
         for (const auto& inner_stmt : stmt.stmts) {
             inner_stmt->accept_visitor(*this);
@@ -480,7 +485,7 @@ namespace XLang::Codegen {
         return {};
     }
 
-    std::any GraphPass::visit_return([[maybe_unused]] const Syntax::Return& stmt) {
+    std::any GraphPass::visit_return(const Syntax::Return& stmt) {
         auto result_box = stmt.result_expr->accept_visitor(*this);
 
         if (!result_box.has_value()) {
@@ -498,7 +503,7 @@ namespace XLang::Codegen {
         return {};
     }
 
-    std::any GraphPass::visit_if([[maybe_unused]] const Syntax::If& stmt) {
+    std::any GraphPass::visit_if(const Syntax::If& stmt) {
         stmt.test->accept_visitor(*this);
 
         /// @note If stmt. forks control flow into T/F branches, so place a Juncture into the current control flow graph.
@@ -527,7 +532,7 @@ namespace XLang::Codegen {
         return {};
     }
 
-    std::unique_ptr<FlowStore> GraphPass::process([[maybe_unused]] const std::vector<Syntax::StmtPtr>& ast) {
+    std::unique_ptr<FlowStore> GraphPass::process(const std::vector<Syntax::StmtPtr>& ast) {
         const auto decls_n = static_cast<int>(ast.size());
 
         for (auto func_decl_idx = 0; func_decl_idx < decls_n; ++func_decl_idx) {

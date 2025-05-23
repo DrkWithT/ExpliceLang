@@ -24,8 +24,8 @@ using namespace XLang;
     }
 
     Codegen::FlowGraphPrinter printer;
-    Codegen::GraphPass ctrl_flow_graph {source_view};
-    auto graph_ptr = ctrl_flow_graph.process(parse_result.decls);
+    Codegen::GraphPass gen_graph_pass {source_view};
+    auto graph_ptr = gen_graph_pass.process(parse_result.decls);
 
     printer(*graph_ptr);
 
