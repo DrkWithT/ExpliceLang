@@ -15,6 +15,7 @@ namespace XLang::Frontend {
         {"bool", LexTag::type_specifier},
         {"int", LexTag::type_specifier},
         {"float", LexTag::type_specifier},
+        {"string", LexTag::type_specifier},
         {"true", LexTag::literal_true},
         {"false", LexTag::literal_false},
         {"::", LexTag::symbol_access},

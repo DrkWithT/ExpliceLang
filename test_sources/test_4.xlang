@@ -1,4 +1,4 @@
-func sum_n(n: int): int {
+func sum_n(n: int,): int {
     let temp: int = n;
     let ans = 0;
 
@@ -11,7 +11,7 @@ func sum_n(n: int): int {
 }
 
 func main(): int {
-    const test = sum_n(10);
+    const test = sum_n(10,);
 
     if (test != 55) {
         return 1;
