@@ -25,6 +25,7 @@ X Lang is my first ever register-bytecode-based language. The goal of this langu
  - Complete emit pass for graph.
  - Create VM and runtime wrappers...
    - NOTE: Unpack function arguments from position `top - argc` to the `top`.
+ - Add while loop support.
  - Add array and tuple parsing support.
  - Add array and tuple codegen support.
  - Finally add string codegen support!

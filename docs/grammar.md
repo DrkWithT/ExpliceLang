@@ -19,7 +19,8 @@
 #### Statements:
 ```bnf
 <comment> = "#" ... "#"
-<program> = <import>* <function-decl>+
+<program> = <top-stmt>*
+<top-stmt> = <import> / <function-decl>
 <import> = "import" <identifier> ";"
 <function-decl> = "func" <identifier> <arg-list> ":" <type-specifier> <block>
 <arg-list> = "(" (<arg> ",")* ")"
@@ -27,8 +28,8 @@
 <type-specifier> = "bool" / "int" / "float" / "string"
 <block> = "{" <nestable-stmt>+ "}"
 <nestable-stmt> = <variable-decl> / <expr-stmt> / <return> / <if>
-<variable-decl> = ("let" / "const") <identifier> ":" <type-specifier> "=" <expr> ";"
+<variable-decl> = ("let" / "const") <identifier> ":" <type-specifier> "=" <or> ";"
 <expr-stmt> = <expr> ";"
-<return> = "return" <expr> ";"
-<if> = "if" "(" <expr> ")" <block> ("else" <block>)?
+<return> = "return" <or> ";"
+<if> = "if" "(" <or> ")" <block> ("else" <block>)?
 ```
