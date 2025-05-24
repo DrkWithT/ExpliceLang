@@ -44,6 +44,7 @@ namespace XLang::Codegen {
     public:
         FlowGraph();
 
+        const std::vector<NodeUnion>& view_nodes() const noexcept;
         NodeUnion& node_at(int id) & noexcept;
         const NodeUnion& node_at(int id) const& noexcept;
 

@@ -443,7 +443,6 @@ namespace XLang::Codegen {
             .op = VM::Opcode::xop_enter
         });
 
-        /// 2. 
         for (const auto& arg_param : stmt.args) {
             auto param_name = Frontend::peek_lexeme(arg_param.name, m_old_src);
 
@@ -489,6 +488,7 @@ namespace XLang::Codegen {
         auto result_box = stmt.result_expr->accept_visitor(*this);
 
         if (!result_box.has_value()) {
+            /// @todo: Add some logic to trace back the return value on the stack?
             place_step(UnaryStep {
                 .op = VM::Opcode::xop_ret,
                 .arg_0 = dud_locator,
@@ -506,6 +506,16 @@ namespace XLang::Codegen {
     std::any GraphPass::visit_if(const Syntax::If& stmt) {
         stmt.test->accept_visitor(*this);
 
+        place_step(UnaryStep {
+            .op = VM::Opcode::xop_jump_if,
+            .arg_0 = dud_locator
+        });
+
+        place_step(UnaryStep {
+            .op = VM::Opcode::xop_jump,
+            .arg_0 = dud_locator
+        });
+
         /// @note If stmt. forks control flow into T/F branches, so place a Juncture into the current control flow graph.
         place_node(Juncture {
             .left = dud_offset,
@@ -522,7 +532,10 @@ namespace XLang::Codegen {
             .steps = {},
             .next = dud_offset
         });
-        stmt.falsy_body->accept_visitor(*this);
+
+        if (stmt.falsy_body) {
+            stmt.falsy_body->accept_visitor(*this);
+        }
 
         place_node(Unit {
             .steps = {},

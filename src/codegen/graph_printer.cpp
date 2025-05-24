@@ -52,9 +52,18 @@ namespace XLang::Codegen {
     FlowGraphPrinter::FlowGraphPrinter() {}
 
     void FlowGraphPrinter::operator()(const XLang::Codegen::FlowStore& all_flow_graphs) {
+        auto print_graph = [this](const FlowGraph& func_cfg) {
+            auto local_node_counter = 0;
+            for (const auto& flow_node : func_cfg.view_nodes()) {
+                std::print("Node {}:\n", local_node_counter);
+                print_node_box(flow_node);
+                ++local_node_counter;
+            }
+        };
+
         for (const auto& [func_id, func_flows] : all_flow_graphs) {
-            std::print("Function chunk {}:\n\n", func_id);
-            print_node_box(func_flows.node_at(0));
+            std::print("\nFunction chunk {}:\n\n", func_id);
+            print_graph(func_flows);
         }
     }
 
