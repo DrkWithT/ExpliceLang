@@ -14,6 +14,10 @@ namespace XLang::Codegen {
     FlowGraph::FlowGraph()
     : m_items {} {}
 
+    const std::vector<NodeUnion>& FlowGraph::view_nodes() const noexcept {
+        return m_items;
+    }
+
     NodeUnion& FlowGraph::node_at(int id) & noexcept {
         return m_items[id];
     }
