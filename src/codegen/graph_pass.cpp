@@ -314,8 +314,25 @@ namespace XLang::Codegen {
         auto record_const_primitive = [this](Semantics::TypeTag tag, const Frontend::Token& primitive_token) {
             auto literal_lexeme = Frontend::peek_lexeme(primitive_token, m_old_src);
             auto literal_text = Frontend::get_lexeme(primitive_token, m_old_src);
-
             auto const_primitive_id = dud_offset;
+
+            if (m_const_map.find(literal_lexeme) != m_const_map.end()) {
+                const_primitive_id = m_const_map.at(literal_lexeme).id;
+
+                place_step(UnaryStep {
+                    .op = VM::Opcode::xop_load_const,
+                    .arg_0 = Locator {
+                        .region = Region::consts,
+                        .id = const_primitive_id
+                    }
+                });
+
+                return Locator {
+                    .region = Region::consts,
+                    .id = const_primitive_id
+                };
+            }
+
 
             if (tag == Semantics::TypeTag::x_type_bool) {
                 const_primitive_id = next_const_id();

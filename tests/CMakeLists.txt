@@ -37,3 +37,5 @@ add_test(NAME codegen_test_0 COMMAND "$<TARGET_FILE:xlang_test_codegen>" "${XLAN
 add_test(NAME codegen_test_1 COMMAND "$<TARGET_FILE:xlang_test_codegen>" "${XLANG_DEMO_DIR}/test_1.xlang")
 add_test(NAME codegen_test_2 COMMAND "$<TARGET_FILE:xlang_test_codegen>" "${XLANG_DEMO_DIR}/test_2.xlang")
 add_test(NAME codegen_test_3 COMMAND "$<TARGET_FILE:xlang_test_codegen>" "${XLANG_DEMO_DIR}/test_3.xlang")
+# add_test(NAME codegen_test_4 COMMAND "$<TARGET_FILE:xlang_test_codegen>" "${XLANG_DEMO_DIR}/test_4.xlang")
+# add_test(NAME codegen_test_5 COMMAND "$<TARGET_FILE:xlang_test_codegen>" "${XLANG_DEMO_DIR}/test_5.xlang")
