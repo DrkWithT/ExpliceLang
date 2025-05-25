@@ -12,21 +12,34 @@
 #include "codegen/flow_nodes.hpp"
 
 namespace XLang::Codegen {
-    using PassTypeInfo = std::variant<Semantics::NullType, Semantics::ArrayType, Semantics::TupleType>;
-    using ScopeRecord = std::unordered_map<std::string_view, Locator>;
-    using FuncRecord = std::unordered_map<std::string_view, Locator>;
+    struct ConstPrimitiveInfo;
+    struct IRStore;
+
+    using ProtoConstMap = std::unordered_map<std::string_view, ConstPrimitiveInfo>;
+    using HeapObjectInfo = std::variant<Semantics::NullType, Semantics::ArrayType, Semantics::TupleType>;
+    using NameLocatorRecord = std::unordered_map<std::string_view, Locator>;
+
+    struct ConstPrimitiveInfo {
+        std::variant<bool, int, float> data;
+        int id;
+    };
+
+    struct IRStore {
+        std::vector<ProtoConstMap> const_chunks;
+        std::unique_ptr<FlowStore> func_cfgs;
+    };
 
     class HeapAllocator {
     public:
         HeapAllocator();
 
-        [[nodiscard]] const PassTypeInfo& lookup_info(int id) const noexcept;
+        [[nodiscard]] const HeapObjectInfo& lookup_info(int id) const noexcept;
         [[nodiscard]] int allocate(Semantics::ArrayType array_tag);
         [[nodiscard]] int allocate(Semantics::TupleType tuple_tag);
         [[nodiscard]] bool release(int id);
 
     private:
-        std::unordered_map<int, PassTypeInfo> m_items;
+        std::unordered_map<int, HeapObjectInfo> m_items;
         std::vector<int> m_free_list;
 
         [[nodiscard]] static int next_id() noexcept;
@@ -45,9 +58,12 @@ namespace XLang::Codegen {
         };
 
         HeapAllocator m_heap_all;
-        ScopeRecord m_current_name_map;
-        FuncRecord m_global_func_map;
-        std::unordered_map<std::string_view, int> m_const_map;
+        NameLocatorRecord m_current_name_map;
+        NameLocatorRecord m_global_func_map;
+        ProtoConstMap m_const_map;
+
+        /// @note Stores compiled constant primitives per function chunk.
+        std::vector<ProtoConstMap> m_func_consts;
 
         /// @note refers new nodes to connect later
         std::vector<NodeUnion> m_nodes;
@@ -72,6 +88,8 @@ namespace XLang::Codegen {
         [[maybe_unused]] bool delete_location(const Locator& loc);
         const Locator& lookup_named_location(std::string_view name) const;
         const Locator& lookup_callable_name(std::string_view name) const;
+
+        void commit_current_consts();
 
         void leave_record();
         void place_step(StepUnion step);
@@ -102,6 +120,6 @@ namespace XLang::Codegen {
         [[nodiscard]] std::any visit_return(const Syntax::Return& stmt) override;
         [[nodiscard]] std::any visit_if(const Syntax::If& stmt) override;
 
-        [[nodiscard]] std::unique_ptr<FlowStore> process(const std::vector<Syntax::StmtPtr>& ast);
+        [[nodiscard]] IRStore process(const std::vector<Syntax::StmtPtr>& ast);
     };
 }

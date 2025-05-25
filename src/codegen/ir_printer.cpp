@@ -1,7 +1,7 @@
 #include <array>
 #include <string_view>
 #include <print>
-#include "codegen/graph_printer.hpp"
+#include "codegen/ir_printer.hpp"
 
 namespace XLang::Codegen {
     static constexpr std::array<std::string_view, static_cast<std::size_t>(VM::Opcode::last)> opcode_names = {
@@ -49,25 +49,45 @@ namespace XLang::Codegen {
         return region_names[static_cast<int>(region)];
     }
 
-    FlowGraphPrinter::FlowGraphPrinter() {}
+    IRPrinter::IRPrinter() {}
 
-    void FlowGraphPrinter::operator()(const XLang::Codegen::FlowStore& all_flow_graphs) {
+    void IRPrinter::operator()(const Codegen::IRStore& all_ir) {
+        auto print_const_chunk = [](const Codegen::ProtoConstMap& const_chunk) {
+            for (const auto& chunk_entry : const_chunk) {
+                const auto& [entry_value, entry_base_offset] = chunk_entry.second;
+
+                if (entry_value.index() == 0) {
+                    std::print("const-{}: {}\n", entry_base_offset, std::get<bool>(entry_value));
+                } else if (entry_value.index() == 1) {
+                    std::print("const-{}: {}\n", entry_base_offset, std::get<int>(entry_value));
+                } else if (entry_value.index() == 2) {
+                    std::print("const-{}: {}\n", entry_base_offset, std::get<float>(entry_value));
+                }
+            }
+        };
+
         auto print_graph = [this](const FlowGraph& func_cfg) {
             auto local_node_counter = 0;
+
             for (const auto& flow_node : func_cfg.view_nodes()) {
-                std::print("Node {}:\n", local_node_counter);
+                std::print("\nNode {}:\n", local_node_counter);
                 print_node_box(flow_node);
                 ++local_node_counter;
             }
         };
 
-        for (const auto& [func_id, func_flows] : all_flow_graphs) {
-            std::print("\nFunction chunk {}:\n\n", func_id);
+        for (const auto& [func_id, func_flows] : *all_ir.func_cfgs) {
+            std::print("\nFunction chunk {}:\n", func_id);
+
+            std::print("\nConst. Chunk {}:\n", func_id);
+            print_const_chunk(all_ir.const_chunks[func_id]);
+
+            std::print("\nInstr. Chunk {}:\n", func_id);
             print_graph(func_flows);
         }
     }
 
-    void FlowGraphPrinter::print_node_box(const NodeUnion& node_box) {
+    void IRPrinter::print_node_box(const NodeUnion& node_box) {
         if (node_box.index() == 0) {
             print_unit(std::get<Unit>(node_box));
         } else {
@@ -75,7 +95,7 @@ namespace XLang::Codegen {
         }
     }
 
-    void FlowGraphPrinter::print_unit(const Unit& unit) {
+    void IRPrinter::print_unit(const Unit& unit) {
         std::print("Unit:\n.next = {}\n\n", unit.next);
         for (const auto& step : unit.steps) {
             if (step.index() == 0) {
@@ -103,7 +123,7 @@ namespace XLang::Codegen {
         }
     }
 
-    void FlowGraphPrinter::print_juncture(const Juncture& juncture) {
+    void IRPrinter::print_juncture(const Juncture& juncture) {
         std::print("Juncture:\n\t.left = {}, .right = {}\n\n", juncture.left, juncture.right);
     }
 }

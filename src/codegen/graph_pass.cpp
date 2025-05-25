@@ -14,7 +14,7 @@ namespace XLang::Codegen {
     HeapAllocator::HeapAllocator()
     : m_items {}, m_free_list {} {}
 
-    const PassTypeInfo& HeapAllocator::lookup_info(int id) const noexcept {
+    const HeapObjectInfo& HeapAllocator::lookup_info(int id) const noexcept {
         return m_items.at(id);
     }
 
@@ -137,7 +137,12 @@ namespace XLang::Codegen {
         return m_global_func_map.at(name);
     }
 
+    void GraphPass::commit_current_consts() {
+        m_func_consts.emplace_back(m_const_map);
+    }
+
     void GraphPass::leave_record() {
+        m_const_map.clear();
         m_current_name_map.clear();
     }
 
@@ -303,33 +308,58 @@ namespace XLang::Codegen {
 
 
     GraphPass::GraphPass(std::string_view old_source)
-    : m_heap_all {}, m_current_name_map {}, m_global_func_map {}, m_const_map {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source} {}
+    : m_heap_all {}, m_current_name_map {}, m_global_func_map {}, m_const_map {}, m_func_consts {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source} {}
 
     std::any GraphPass::visit_literal(const Syntax::Literal& expr) {
-        const auto primitive_tag = std::any_cast<Semantics::TypeTag>(expr.type_tagging());
-        const auto& expr_token = expr.token;
-        auto literal_lexeme = Frontend::peek_lexeme(expr_token, m_old_src);
-        auto literal_const_id = dud_offset;
+        auto record_const_primitive = [this](Semantics::TypeTag tag, const Frontend::Token& primitive_token) {
+            auto literal_lexeme = Frontend::peek_lexeme(primitive_token, m_old_src);
+            auto literal_text = Frontend::get_lexeme(primitive_token, m_old_src);
 
-        switch (primitive_tag) {
-        case Semantics::TypeTag::x_type_bool:
-        case Semantics::TypeTag::x_type_int:
-        case Semantics::TypeTag::x_type_float:
-            literal_const_id = next_const_id();
-            m_const_map[literal_lexeme] = literal_const_id;
+            auto const_primitive_id = dud_offset;
+
+            if (tag == Semantics::TypeTag::x_type_bool) {
+                const_primitive_id = next_const_id();
+                m_const_map[literal_lexeme] = {
+                    .data = literal_text == "true",
+                    .id = const_primitive_id
+                };
+            } else if (tag == Semantics::TypeTag::x_type_int) {
+                const_primitive_id = next_const_id();
+                m_const_map[literal_lexeme] = {
+                    .data = std::stoi(literal_text),
+                    .id = const_primitive_id
+                };
+            } else if (tag == Semantics::TypeTag::x_type_float) {
+                const_primitive_id = next_const_id();
+                m_const_map[literal_lexeme] = {
+                    .data = std::stof(literal_text),
+                    .id = const_primitive_id
+                };
+            }
 
             place_step(UnaryStep {
                 .op = VM::Opcode::xop_load_const,
                 .arg_0 = Locator {
                     .region = Region::consts,
-                    .id = literal_const_id
+                    .id = const_primitive_id
                 }
             });
 
             return Locator {
                 .region = Region::consts,
-                .id = literal_const_id
+                .id = const_primitive_id
             };
+        };
+
+        const auto primitive_tag = std::any_cast<Semantics::TypeTag>(expr.type_tagging());
+        const auto& expr_token = expr.token;
+        auto literal_lexeme = Frontend::peek_lexeme(expr_token, m_old_src);
+
+        switch (primitive_tag) {
+        case Semantics::TypeTag::x_type_bool:
+        case Semantics::TypeTag::x_type_int:
+        case Semantics::TypeTag::x_type_float:
+            return record_const_primitive(primitive_tag, expr_token);
         case Semantics::TypeTag::x_type_unknown:
             /// @note Handle identifiers here...
             return lookup_named_location(literal_lexeme);
@@ -460,6 +490,8 @@ namespace XLang::Codegen {
             .region = Region::routines,
             .id = func_id
         };
+
+        commit_current_consts();
         leave_record();
 
         return func_id;
@@ -545,7 +577,7 @@ namespace XLang::Codegen {
         return {};
     }
 
-    std::unique_ptr<FlowStore> GraphPass::process(const std::vector<Syntax::StmtPtr>& ast) {
+    IRStore GraphPass::process(const std::vector<Syntax::StmtPtr>& ast) {
         const auto decls_n = static_cast<int>(ast.size());
 
         for (auto func_decl_idx = 0; func_decl_idx < decls_n; ++func_decl_idx) {
@@ -556,6 +588,9 @@ namespace XLang::Codegen {
             commit_nodes_to_graph(generated_func_id, func_decl_idx == decls_n - 1);
         }
 
-        return {std::move(m_result)};
+        return {
+            .const_chunks = std::move(m_func_consts),
+            .func_cfgs = std::move(m_result)
+        };
     }
 }

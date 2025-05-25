@@ -3,7 +3,7 @@
 #include "frontend/files.hpp"
 #include "frontend/parser.hpp"
 #include "codegen/graph_pass.hpp"
-#include "codegen/graph_printer.hpp"
+#include "codegen/ir_printer.hpp"
 
 using namespace XLang;
 
@@ -23,11 +23,11 @@ using namespace XLang;
         return false;
     }
 
-    Codegen::FlowGraphPrinter printer;
+    Codegen::IRPrinter printer;
     Codegen::GraphPass gen_graph_pass {source_view};
-    auto graph_ptr = gen_graph_pass.process(parse_result.decls);
+    auto ir = gen_graph_pass.process(parse_result.decls);
 
-    printer(*graph_ptr);
+    printer(ir);
 
     return true;
 }
