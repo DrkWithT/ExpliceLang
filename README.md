@@ -1,13 +1,13 @@
 ## README
 
 ### Summary
-X Lang is my first ever register-bytecode-based language. The goal of this language is to become a great improvement in syntax and ergonomics over some feature creeping languages. See the below points for its design philosophy.
+Xplice is my first ever register-bytecode-based language. The goal of this language is to become a familiar-looking, simple, and procedural utility language. See the below points for its design philosophy.
 
 ### General:
  - Familiar-ish syntax to TS and C++.
- - Strong, static type system.
- - Module-based. (TODO)
- - Support of metaprogramming. (TODO)
+ - Static, checked type system.
+ - Module-based? (TODO)
+ - Native function support? (TODO)
 
 ### Philosophy:
  - Explicit behavior is better for understanding.
@@ -20,8 +20,6 @@ X Lang is my first ever register-bytecode-based language. The goal of this langu
  - [VM](./docs/vm.md)
 
 ### Roadmap:
- - Complete control-flow graph pass for AST.
-   - Only consider "primitive" types i.e bool, int, float
  - Complete emit pass for graph.
  - Create VM and runtime wrappers...
    - **NOTE**: Unpack function arguments from position `top - argc` to the `top`.
