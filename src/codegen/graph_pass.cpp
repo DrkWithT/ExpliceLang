@@ -308,7 +308,7 @@ namespace XLang::Codegen {
 
 
     GraphPass::GraphPass(std::string_view old_source)
-    : m_heap_all {}, m_current_name_map {}, m_global_func_map {}, m_const_map {}, m_func_consts {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source} {}
+    : m_heap_all {}, m_current_name_map {}, m_global_func_map {}, m_const_map {}, m_func_consts {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source}, m_main_func_idx {dud_offset} {}
 
     std::any GraphPass::visit_literal(const Syntax::Literal& expr) {
         auto record_const_primitive = [this](Semantics::TypeTag tag, const Frontend::Token& primitive_token) {
@@ -480,6 +480,7 @@ namespace XLang::Codegen {
 
     std::any GraphPass::visit_function_decl(const Syntax::FunctionDecl& stmt) {
         auto func_name = Frontend::peek_lexeme(stmt.name, m_old_src);
+
         place_node(Unit {
             .steps = {},
             .next = dud_offset
@@ -502,6 +503,11 @@ namespace XLang::Codegen {
         stmt.body->accept_visitor(*this);
 
         const auto func_id = next_func_id();
+
+        /// @note Mark which compiled routine is the main one, as it's invoked by the VM.
+        if (func_name == "main") {
+            m_main_func_idx = func_id;
+        }
 
         m_global_func_map[func_name] = {
             .region = Region::routines,
@@ -607,7 +613,8 @@ namespace XLang::Codegen {
 
         return {
             .const_chunks = std::move(m_func_consts),
-            .func_cfgs = std::move(m_result)
+            .func_cfgs = std::move(m_result),
+            .main_func_id = -1
         };
     }
 }

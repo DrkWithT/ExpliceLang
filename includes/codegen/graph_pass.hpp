@@ -27,6 +27,7 @@ namespace XLang::Codegen {
     struct IRStore {
         std::vector<ProtoConstMap> const_chunks;
         std::unique_ptr<FlowStore> func_cfgs;
+        int main_func_id;
     };
 
     class HeapAllocator {
@@ -75,6 +76,8 @@ namespace XLang::Codegen {
         std::unique_ptr<FlowStore> m_result;
 
         std::string_view m_old_src;
+
+        int m_main_func_idx;
 
         /// @note const_id resets after each function decl processed... const_id = m_const_map.size()
         [[nodiscard]] int next_const_id() noexcept;

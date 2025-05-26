@@ -41,4 +41,9 @@ namespace XLang::VM {
         xerr_memory_exceeded,
         xerr_general,
     };
+
+    enum class RoutineType : unsigned char {
+        xrt_virtual,
+        xrt_native
+    };
 }
