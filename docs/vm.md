@@ -49,3 +49,9 @@
  - **5** heap error
  - **6** memory exceeded error
  - **7** general error
+
+### Bytecode Format:
+ - Instruction:
+   1. Arity prefix: 0, 1, 2, 3 (how many `Locator` arguments are present after the opcode)
+   2. Opcode: 1 byte for a `VM::Opcode`.
+   3. Arguments: An arity-prefix sized sequence of `Locator` arguments.
