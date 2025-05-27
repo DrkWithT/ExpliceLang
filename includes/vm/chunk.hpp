@@ -9,17 +9,22 @@
 namespace XLang::VM {
     class VM;
 
+    struct Chunk;
+
+    template <RoutineType RTag>
+    class Function {};
+
     using RuntimeByte = unsigned char;
     using ArgStore = std::vector<Value>;
     using ConstantStore = std::unordered_map<int, Value>;
+    using NativeFunction = Function<RoutineType::xrt_native>;
+    using ProgramFunction = Function<RoutineType::xrt_virtual>;
+    using FunctionStore = std::unordered_map<int, ProgramFunction>;
 
     struct Chunk {
         ConstantStore constants;
         std::vector<RuntimeByte> bytecode;
     };
-
-    template <RoutineType RTag>
-    class Function {};
 
     template <>
     class Function <RoutineType::xrt_virtual> {
@@ -65,5 +70,10 @@ namespace XLang::VM {
         [[nodiscard]] Errcode invoke(Runtime& vm, const ArgStore& args) const {
             return vm.invoke_native_func(*this, args);
         }
+    };
+
+    struct XpliceProgram {
+        FunctionStore func_chunks;
+        int entry_func_id;
     };
 }

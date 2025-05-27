@@ -13,10 +13,6 @@ namespace XLang::VM {
 
     class VM {
     public:
-        using NativeFunction = Function<RoutineType::xrt_native>;
-        using ProgramFunction = Function<RoutineType::xrt_virtual>;
-        using ProgramStore = std::unordered_map<int, ProgramFunction>;
-
         VM(ProgramStore prgm);
 
         [[nodiscard]] Errcode run();
