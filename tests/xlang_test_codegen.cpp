@@ -4,6 +4,8 @@
 #include "frontend/parser.hpp"
 #include "codegen/graph_pass.hpp"
 #include "codegen/ir_printer.hpp"
+#include "codegen/emit_pass.hpp"
+#include "codegen/disassembler.hpp"
 
 using namespace XLang;
 
@@ -28,6 +30,14 @@ using namespace XLang;
     auto ir = gen_graph_pass.process(parse_result.decls);
 
     printer(ir);
+
+    const auto& [constants_storage, cfg_map_sp, main_id] = ir;
+
+    Codegen::EmitCodePass emitter;
+    auto foo = emitter.process_full_ir(constants_storage, *cfg_map_sp, main_id);
+
+    Codegen::Disassembler disassembler;
+    disassembler(*foo);
 
     return true;
 }
