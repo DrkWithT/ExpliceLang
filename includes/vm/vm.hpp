@@ -13,7 +13,7 @@ namespace XLang::VM {
 
     class VM {
     public:
-        VM(ProgramStore prgm);
+        VM(XpliceProgram prgm) noexcept;
 
         [[nodiscard]] Errcode run();
         [[nodiscard]] Errcode invoke_virtual_func(const ProgramFunction& func, const ArgStore& args);
@@ -22,7 +22,7 @@ namespace XLang::VM {
         void add_native_function(int native_id, const NativeFunction& func) noexcept;
 
     private:
-        ProgramStore m_program_funcs;
+        XpliceProgram m_program_funcs;
         std::unordered_map<int, NativeFunction> m_native_funcs;
         std::vector<CallFrame> m_frames;
         std::vector<Value> m_values;

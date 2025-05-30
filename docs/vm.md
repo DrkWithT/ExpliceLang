@@ -17,8 +17,8 @@
  - **POP** pop-n
  - **PEEK** base-offset
  - **LOAD_CONST** const-id
- - **MAKE_ARRAY** (top ... top-n)
- - **MAKE_TUPLE** (top ... top-n)
+ - **MAKE_ARRAY** descending-temps-n
+ - **MAKE_TUPLE** descending-temps-n
  - **ACCESS_FIELD** object-id, key-id
  - **NEGATE**
  - **ADD**

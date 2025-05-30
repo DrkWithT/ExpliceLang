@@ -3,7 +3,7 @@
 #include "vm/tags.hpp"
 
 namespace XLang::Codegen {
-    enum class Region {
+    enum class Region : unsigned char {
         consts,
         temp_stack,
         obj_heap,

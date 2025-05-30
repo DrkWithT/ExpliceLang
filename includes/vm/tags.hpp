@@ -1,6 +1,13 @@
 #pragma once
 
 namespace XLang::VM {
+    enum class InstructionArity : unsigned char {
+        xia_0,
+        xia_1,
+        xia_2,
+        xia_3
+    };
+
     enum class Opcode : unsigned char {
         xop_halt,
         xop_noop,
