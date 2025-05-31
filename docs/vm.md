@@ -35,7 +35,7 @@
  - **JUMP_IF** offset-id
  - **ENTER**
     - Places a NULL placeholder on the stack similar to an EBP marker on x86.
- - **RET**
+ - **RET** result-location / result-id
     - Removes the stack frame's items on the stack until a placeholder NULL is reached (like the base pointer in ASM). Then replaces NULL with the result.
  - **CALL** func-id
  - **CALL_NATIVE** unit-id, func-id
