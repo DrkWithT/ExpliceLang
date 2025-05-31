@@ -28,10 +28,8 @@ namespace XLang::Codegen {
 
         auto print_arg = [&bytecode, &chunk_pos]() {
             const auto arg_region_id = bytecode[chunk_pos];
-            auto arg_num = 0;
-
-            std::print("{} ", cm_region_names.at(arg_region_id));
             ++chunk_pos;
+            auto arg_num = 0;
 
             arg_num += bytecode[chunk_pos];
             arg_num += (bytecode[chunk_pos + 1]) << 8;
@@ -39,7 +37,7 @@ namespace XLang::Codegen {
             arg_num += (bytecode[chunk_pos + 3]) << 24;
             chunk_pos += 4;
 
-            std::print("{}:{}\n", cm_region_names.at(arg_region_id), arg_num);
+            std::print("{}:{} ", cm_region_names.at(arg_region_id), arg_num);
         };
 
         if (chunk_func_id == main_func_id) {
@@ -63,9 +61,11 @@ namespace XLang::Codegen {
                 print_arg();
                 break;
             default:
-                std::print("...\n");
+                std::print("...");
                 break;
             }
+
+            std::print("\n");
         }
     }
 }

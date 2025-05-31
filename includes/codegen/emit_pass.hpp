@@ -27,7 +27,7 @@ namespace XLang::Codegen {
     class EmitCodePass {
     public:
         EmitCodePass()
-        : m_incoming {}, m_backpatches {}, m_visited {}, m_result {std::make_unique<Result>()}, m_constant_chunks_view {nullptr}, m_byte_count {0}, m_ir_unit_idx {0} {}
+        : m_incoming {}, m_backpatches {}, m_visited {}, m_result {std::make_unique<VM::XpliceProgram>()}, m_constant_chunks_view {nullptr}, m_byte_count {0}, m_ir_unit_idx {0} {}
 
         [[nodiscard]] Result process(const FlowGraph& control_graph) {
             VM::ConstantStore temp_constants = emit_constant_region(m_constant_chunks_view->at(m_ir_unit_idx));
@@ -85,8 +85,11 @@ namespace XLang::Codegen {
         }
 
         void clear_current_state() {
-            m_incoming.swap({});
-            m_backpatches.swap({});
+            std::queue<int> incoming_xtemp {};
+            std::stack<Backpatch> backpatches_xtemp {};
+
+            m_incoming.swap(incoming_xtemp);
+            m_backpatches.swap(backpatches_xtemp);
             m_visited.clear();
             m_byte_count = 0;
             ++m_ir_unit_idx;
@@ -117,15 +120,15 @@ namespace XLang::Codegen {
             return const_region;
         }
 
-        void emit_instruction_region(const std::vector<NodeUnion>& ir_steps) {
+        [[nodiscard]] std::vector<VM::RuntimeByte> emit_instruction_region(const std::vector<NodeUnion>& ir_steps) {
             std::vector<VM::RuntimeByte> result;
 
-            auto emit_opcode = [&result, this](VM::Opcode opcode) {
+            auto emit_opcode = [&, this](VM::Opcode opcode) {
                 result.push_back(static_cast<VM::RuntimeByte>(opcode));
                 ++m_byte_count;
             };
 
-            auto emit_locator = [&result, this](const Locator& locator) {
+            auto emit_locator = [&, this](const Locator& locator) {
                 const auto& [loc_region, loc_id] = locator;
 
                 result.push_back(static_cast<VM::RuntimeByte>(loc_region));
@@ -139,7 +142,7 @@ namespace XLang::Codegen {
                 m_byte_count += 4;
             };
 
-            auto emit_step = [&result, this](const StepUnion& step) {
+            auto emit_step = [&, this](const StepUnion& step) {
                 const auto step_variant_idx = step.index();
                 VM::Opcode temp_op;
                 auto saved_instr_pos = 0;
@@ -175,8 +178,9 @@ namespace XLang::Codegen {
                     emit_locator(tri_arg2);
                 } else {
                     /// @todo Add codegen error: ill-formed StepUnions have a wrong arity outside [0:3]!
+                    temp_op = VM::Opcode::xop_noop;
                     saved_instr_pos = m_byte_count;
-                    emit_opcode(VM::Opcode::xop_noop);
+                    emit_opcode(temp_op);
                 }
 
                 if (temp_op == VM::Opcode::xop_jump_if) {
@@ -184,7 +188,7 @@ namespace XLang::Codegen {
                     m_backpatches.push(Backpatch {
                         .pending_units = 0,
                         .jump_if_pos = saved_instr_pos,
-                        .backpatch_iffy = 0,
+                        .backpatch_iffy = saved_instr_pos + 12,
                         .jump_else_pos = dud_pos,
                         .backpatch_else = 0
                     });
@@ -193,48 +197,69 @@ namespace XLang::Codegen {
                 }
             };
 
-            auto patch_jump = [&result, this]() {
+            auto patch_jump = [&, this]() {
                 if (m_backpatches.empty()) {
                     return;
                 }
 
-                const auto& [pending_units, if_jmp_idx, if_jmp_target, else_jmp_idx, else_jmp_target] = m_backpatches.top();
+                auto& patch_info = m_backpatches.top();
 
-                if (pending_units == 2) {
-                    --m_backpatches.top().pending_units;
-                    return;
-                } else if (pending_units == 1) {
+                if (patch_info.pending_units == 1) {
                     /// @note After emitting the truthy block, place a `jmp` to skip execution of the else branch for correctness. This jump will be patched too on any fallthrough through these guard clauses.
-                    --m_backpatches.top().pending_units;
+                    patch_info.backpatch_else = m_byte_count;
+
                     m_backpatches.push(Backpatch {
-                        .pending_units = 0,
+                        .pending_units = 1,
                         .jump_if_pos = dud_pos,
                         .backpatch_iffy = dud_pos,
                         .jump_else_pos = m_byte_count,
                         .backpatch_else = dud_pos,
                     });
-                    emit_step(UnaryStep {
-                        .op = VM::Opcode::xop_jump,
-                        .arg_0 = Locator {
-                            .region = Region::none,
-                            .id = dud_pos,
-                        }
+
+                    emit_opcode(VM::Opcode::xop_jump);
+                    emit_locator(Locator {
+                        .region = Region::none,
+                        .id = dud_pos
                     });
 
                     return;
+                } else if (patch_info.pending_units == 0) {
+                    patch_info.backpatch_else = m_byte_count;
+
+                    if (m_backpatches.size() >= 2) {
+                        const auto saved_patch = patch_info;
+                        m_backpatches.pop();
+
+                        /// @note Set previous backpatch to patch the pre-if falsy-jmp to goto the else-skipping jump.
+                        const auto prev_jump_dest = m_byte_count - 6;
+                        m_backpatches.top().backpatch_else = prev_jump_dest;
+                        const auto prev_target_pos = m_backpatches.top().jump_else_pos + 2;
+
+                        result[prev_target_pos] = prev_jump_dest & 0x000000ff;
+                        result[prev_target_pos + 1] = (prev_jump_dest & 0x0000ff00) >> 8;
+                        result[prev_target_pos + 2] = (prev_jump_dest & 0x00ff0000) >> 16;
+                        result[prev_target_pos + 3] = (prev_jump_dest & 0xff000000) >> 24;
+
+                        m_backpatches.push(saved_patch);
+                    }
+                } else {
+                    m_backpatches.pop(); // todo: remove??
+                    return;
                 }
 
-                if (if_jmp_idx != dud_pos) {
+                const auto [pending_units, if_jmp_idx, if_jmp_target, else_jmp_idx, else_jmp_target] = m_backpatches.top();
+
+                if (if_jmp_idx != dud_pos && if_jmp_target != dud_pos) {
                     /// @note Uses +2 to pass the opcode and argument tag (Region)
                     const auto jmp_if_arg_pos = if_jmp_idx + 2;
-                    
+
                     result[jmp_if_arg_pos] = if_jmp_target & 0x000000ff;
                     result[jmp_if_arg_pos + 1] = (if_jmp_target & 0x0000ff00) >> 8;
                     result[jmp_if_arg_pos + 2] = (if_jmp_target & 0x00ff0000) >> 16;
                     result[jmp_if_arg_pos + 3] = (if_jmp_target & 0xff000000) >> 24;
                 }
 
-                if (else_jmp_idx != dud_pos) {
+                if (else_jmp_idx != dud_pos && else_jmp_target != dud_pos) {
                     /// @note Uses +2 to pass the opcode and argument tag (Region)
                     const auto jmp_else_arg_pos = else_jmp_idx + 2;
                     
@@ -243,8 +268,6 @@ namespace XLang::Codegen {
                     result[jmp_else_arg_pos + 2] = (else_jmp_target & 0x00ff0000) >> 16;
                     result[jmp_else_arg_pos + 3] = (else_jmp_target & 0xff000000) >> 24;
                 }
-   
-                m_backpatches.pop();
             };
 
             m_incoming.push(0);
@@ -253,6 +276,10 @@ namespace XLang::Codegen {
                 // 1. get next node.
                 const int node_id = m_incoming.front();
                 m_incoming.pop();
+
+                if (node_id == dud_pos || m_visited.contains(node_id)) {
+                    continue;
+                }
 
                 // 2. emit each step in the node while updating byte count.
                 // 2b. If the step is a jump operation, push a pending Backpatch...
@@ -266,25 +293,41 @@ namespace XLang::Codegen {
 
                     patch_jump();
 
+                    m_visited.insert(node_id);
+
                     // 3. Queue next children for processing...
-                    if (unit_next != dud_pos) {
+                    if (!m_visited.contains(unit_next)) {
                         m_incoming.push(unit_next);
+                    }
+
+                    if (!m_backpatches.empty()) {
+                        --m_backpatches.top().pending_units;
                     }
                 } else {
                     const auto& [truthy_next, falsy_next] = std::get<Juncture>(ir_steps[node_id]);
 
                     // 3. Queue next children for processing...
-                    if (truthy_next != dud_pos) {
+                    if (!m_visited.contains(truthy_next)) {
                         m_incoming.push(truthy_next);
-                        ++m_backpatches.top().pending_units;
+
+                        if (!m_backpatches.empty()) {
+                            ++m_backpatches.top().pending_units;
+                        }
                     }
 
-                    if (falsy_next != dud_pos) {
+                    if (!m_visited.contains(falsy_next)) {
                         m_incoming.push(falsy_next);
-                        ++m_backpatches.top().pending_units;
+
+                        if (!m_backpatches.empty()) {
+                            ++m_backpatches.top().pending_units;
+                        }
                     }
+
+                    m_visited.insert(node_id);
                 }
             }
+
+            return result;
         }
     };
 }

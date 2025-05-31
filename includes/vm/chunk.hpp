@@ -32,7 +32,7 @@ namespace XLang::VM {
         Chunk m_code;
 
     public:
-        Function() = delete;
+        Function() = default;
 
         Function(Chunk body_code) noexcept
         : m_code {std::move(body_code)} {}

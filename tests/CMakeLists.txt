@@ -30,7 +30,7 @@ add_test(NAME parser_test_3 COMMAND "$<TARGET_FILE:xlang_test_parser>" "${XLANG_
 add_executable(xlang_test_codegen)
 target_link_directories(xlang_test_codegen PRIVATE "${XLANG_LIB_DIR}")
 target_include_directories(xlang_test_codegen PUBLIC "${XLANG_INC_DIR}")
-target_link_libraries(xlang_test_codegen PRIVATE frontend PRIVATE semantics PRIVATE syntax PRIVATE codegen)
+target_link_libraries(xlang_test_codegen PRIVATE frontend PRIVATE semantics PRIVATE syntax PRIVATE codegen PRIVATE vm)
 target_sources(xlang_test_codegen PRIVATE xlang_test_codegen.cpp)
 
 add_test(NAME codegen_test_0 COMMAND "$<TARGET_FILE:xlang_test_codegen>" "${XLANG_DEMO_DIR}/test_0.xlang")
