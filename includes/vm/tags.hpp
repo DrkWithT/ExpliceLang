@@ -31,6 +31,7 @@ namespace XLang::VM {
         xop_log_or,
         xop_jump,
         xop_jump_if,
+        xop_jump_not_if,
         xop_enter,
         xop_ret,
         xop_call,

@@ -562,12 +562,7 @@ namespace XLang::Codegen {
         stmt.test->accept_visitor(*this);
 
         place_step(UnaryStep {
-            .op = VM::Opcode::xop_jump_if,
-            .arg_0 = dud_locator
-        });
-
-        place_step(UnaryStep {
-            .op = VM::Opcode::xop_jump,
+            .op = VM::Opcode::xop_jump_not_if,
             .arg_0 = dud_locator
         });
 
@@ -582,15 +577,21 @@ namespace XLang::Codegen {
             .next = dud_offset
         });
         stmt.truthy_body->accept_visitor(*this);
-
-        place_node(Unit {
-            .steps = {},
-            .next = dud_offset
+        place_step(UnaryStep {
+            .op = VM::Opcode::xop_jump,
+            .arg_0 = dud_locator
         });
 
         if (stmt.falsy_body) {
+            place_node(Unit {
+                .steps = {},
+                .next = dud_offset
+            });
             stmt.falsy_body->accept_visitor(*this);
         }
+        place_step(NonaryStep {
+            .op = VM::Opcode::xop_noop
+        });
 
         place_node(Unit {
             .steps = {},
@@ -614,7 +615,7 @@ namespace XLang::Codegen {
         return {
             .const_chunks = std::move(m_func_consts),
             .func_cfgs = std::move(m_result),
-            .main_func_id = -1
+            .main_func_id = m_main_func_idx
         };
     }
 }

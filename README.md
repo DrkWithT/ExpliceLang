@@ -20,10 +20,7 @@ Xplice is my first ever register-bytecode-based language. The goal of this langu
  - [VM](./docs/vm.md)
 
 ### Roadmap:
- - Complete emit pass for graph.
-   - **TODO**: fix emit pass by building a queue of pending backpatches during traversal, and then apply all of them after traversal finishes.
- - Create VM and runtime wrappers...
-   - **NOTE**: Unpack function arguments from position `top - argc` to the `top`.
+ - **NOTE**: Unpack function arguments from position `top - argc` to the `top`.
  - Add support for imports of native functions!
  - Add while loop support.
  - Add array and tuple parsing support.

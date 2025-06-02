@@ -27,6 +27,7 @@ namespace XLang::Codegen {
         "log_or",
         "jump",
         "jump_if",
+        "jump_not_if",
         "enter",
         "ret",
         "call",

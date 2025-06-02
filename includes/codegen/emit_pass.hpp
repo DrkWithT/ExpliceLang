@@ -4,7 +4,7 @@
 #include <memory>
 #include <set>
 #include <stack>
-#include <queue>
+#include <vector>
 #include "codegen/policies.hpp"
 #include "codegen/steps.hpp"
 #include "codegen/flow_nodes.hpp"
@@ -12,12 +12,22 @@
 #include "vm/chunk.hpp"
 
 namespace XLang::Codegen {
+    inline constexpr auto dud_num = -1;
+
+    enum class PatchStatus : unsigned char {
+        patch_skip_truthy,
+        patch_skip_falsy,
+        patch_done
+    };
+
     struct Backpatch {
-        int pending_units;
-        int jump_if_pos;
-        int backpatch_iffy;
-        int jump_else_pos;
-        int backpatch_else;
+        PatchStatus status;
+        int jump_pos;
+        int jump_patch;
+
+        friend constexpr bool patch_usable(const Backpatch& patch) noexcept {
+            return patch.jump_pos != dud_num && patch.jump_patch != dud_num;
+        }
     };
 
     /**
@@ -27,7 +37,7 @@ namespace XLang::Codegen {
     class EmitCodePass {
     public:
         EmitCodePass()
-        : m_incoming {}, m_backpatches {}, m_visited {}, m_result {std::make_unique<VM::XpliceProgram>()}, m_constant_chunks_view {nullptr}, m_byte_count {0}, m_ir_unit_idx {0} {}
+        : m_result {std::make_unique<VM::XpliceProgram>()}, m_constant_chunks_view {nullptr}, m_ir_unit_idx {0} {}
 
         [[nodiscard]] Result process(const FlowGraph& control_graph) {
             VM::ConstantStore temp_constants = emit_constant_region(m_constant_chunks_view->at(m_ir_unit_idx));
@@ -57,41 +67,14 @@ namespace XLang::Codegen {
     private:
         static constexpr auto dud_pos = -1;
 
-        /// @note Stores next nodes by ID to emit bytecode for, etc.
-        std::queue<int> m_incoming;
-
-        /// @note Stores backpatch info for earlier-encountered dud jumps.
-        std::stack<Backpatch> m_backpatches;
-
-        /// @note Stores which node IDs were visited.
-        std::set<int> m_visited;
-
         /// @note Stores bytecode program being built: "VM-ProgramStore"
         std::unique_ptr<VM::XpliceProgram> m_result;
 
         const std::vector<ProtoConstMap>* m_constant_chunks_view;
 
-        int m_byte_count;
-
-        /// @note Tracks index of a corresponding pair of constants with their instructions from IRStore.
         int m_ir_unit_idx;
 
-        [[nodiscard]] int current_byte_count() const& noexcept {
-            return m_byte_count;
-        }
-
-        [[nodiscard]] int current_byte_count() & noexcept {
-            return m_byte_count;
-        }
-
         void clear_current_state() {
-            std::queue<int> incoming_xtemp {};
-            std::stack<Backpatch> backpatches_xtemp {};
-
-            m_incoming.swap(incoming_xtemp);
-            m_backpatches.swap(backpatches_xtemp);
-            m_visited.clear();
-            m_byte_count = 0;
             ++m_ir_unit_idx;
         }
 
@@ -122,208 +105,133 @@ namespace XLang::Codegen {
 
         [[nodiscard]] std::vector<VM::RuntimeByte> emit_instruction_region(const std::vector<NodeUnion>& ir_steps) {
             std::vector<VM::RuntimeByte> result;
+            auto byte_total = 0;
 
-            auto emit_opcode = [&, this](VM::Opcode opcode) {
+            /// @note Stores next nodes by ID to emit bytecode for, etc.
+            std::stack<int> incoming;
+            /// @note Stores backpatch info for earlier-encountered dud jumps.
+            std::stack<Backpatch> patches;
+            /// @note Stores which node IDs were visited.
+            std::set<int> visited;
+
+            auto emit_opcode = [&result, &byte_total](VM::Opcode opcode) {
                 result.push_back(static_cast<VM::RuntimeByte>(opcode));
-                ++m_byte_count;
+                ++byte_total;
             };
 
-            auto emit_locator = [&, this](const Locator& locator) {
-                const auto& [loc_region, loc_id] = locator;
+            auto emit_arg = [&result, &byte_total](const Locator& arg) {
+                const auto& [arg_tag, arg_num] = arg;
+                const auto tag = static_cast<VM::RuntimeByte>(arg_tag);
 
-                result.push_back(static_cast<VM::RuntimeByte>(loc_region));
-                ++m_byte_count;
-
-                /// @note Store integers as big endian for easier decoding from LSB -> MSB with a "decoding forward" cursor in the VM.
-                result.push_back(loc_id & 0x000000ff);
-                result.push_back((loc_id & 0x0000ff00) >> 8);
-                result.push_back((loc_id & 0x00ff0000) >> 16);
-                result.push_back((loc_id & 0xff000000) >> 24);
-                m_byte_count += 4;
+                result[byte_total] = tag;
+                ++byte_total;
+                result[byte_total] = (tag & 0x000000ff);
+                result[byte_total + 1] = (tag & 0x0000ff00) >> 8;
+                result[byte_total + 2] = (tag & 0x00ff0000) >> 16;
+                result[byte_total + 3] = (tag & 0xff000000) >> 24;
+                byte_total += 4;
             };
 
-            auto emit_step = [&, this](const StepUnion& step) {
-                const auto step_variant_idx = step.index();
-                VM::Opcode temp_op;
-                auto saved_instr_pos = 0;
+            auto emit_step = [&result, &byte_total, &patches](const StepUnion& step) {
+                const auto step_var_idx = step.index();
+                const auto instruction_pos = byte_total;
+                VM::Opcode passed_op = VM::Opcode::xop_noop;
 
-                if (step_variant_idx == 0) {
-                    // Nonary: 1 byte
-                    temp_op = std::get<NonaryStep>(step).op;
-                    saved_instr_pos = m_byte_count;
-                    emit_opcode(temp_op);
-                } else if (step_variant_idx == 1) {
-                    // Unary: 6 bytes
-                    const auto& [un_op, un_arg0] = std::get<UnaryStep>(step);
-                    temp_op = un_op;
-                    saved_instr_pos = m_byte_count;
-                    emit_opcode(un_op);
-                    emit_locator(un_arg0);
-                } else if (step_variant_idx == 2) {
-                    // Binary: 11 bytes
-                    const auto& [bi_op, bi_arg0, bi_arg1] = std::get<BinaryStep>(step);
-                    temp_op = bi_op;
-                    saved_instr_pos = m_byte_count;
-                    emit_opcode(bi_op);
-                    emit_locator(bi_arg0);
-                    emit_locator(bi_arg1);
-                } else if (step_variant_idx == 3) {
-                    // Ternary: 16 bytes
-                    const auto& [tri_op, tri_arg0, tri_arg1, tri_arg2] = std::get<TernaryStep>(step);
-                    temp_op = tri_op;
-                    saved_instr_pos = m_byte_count;
-                    emit_opcode(tri_op);
-                    emit_locator(tri_arg0);
-                    emit_locator(tri_arg1);
-                    emit_locator(tri_arg2);
-                } else {
-                    /// @todo Add codegen error: ill-formed StepUnions have a wrong arity outside [0:3]!
-                    temp_op = VM::Opcode::xop_noop;
-                    saved_instr_pos = m_byte_count;
-                    emit_opcode(temp_op);
-                }
+                if (step_var_idx == 0) {
+                    const auto& [nonary_op] = std::get<NonaryStep>(step);
+                    emit_opcode(nonary_op);
+                    passed_op = nonary_op;
+                } else if (step_var_idx == 1) {
+                    const auto& [unary_op, unary_arg0] = std::get<UnaryStep>(step);
+                    emit_opcode(unary_op);
+                    emit_arg(unary_arg0);
+                    passed_op = unary_op;
+                } else if (step_var_idx == 2) {
+                    const auto& [binary_op, binary_arg0, binary_arg1] = std::get<BinaryStep>(step);
+                    emit_opcode(binary_op);
+                    emit_arg(binary_arg0);
+                    emit_arg(binary_arg1);
+                    passed_op = binary_op;
+                } else if (step_var_idx == 3) {
+                    const auto& [ternary_op, ternary_arg0, ternary_arg1, ternary_arg2] = std::get<TernaryStep>(step);
+                    emit_opcode(ternary_op);
+                    emit_arg(ternary_arg0);
+                    emit_arg(ternary_arg1);
+                    emit_arg(ternary_arg2);
+                    passed_op = ternary_op;
+                } else {}
 
-                if (temp_op == VM::Opcode::xop_jump_if) {
-                    /// @note any jump to "else code" always follows a jump_if per branch.
-                    m_backpatches.push(Backpatch {
-                        .pending_units = 0,
-                        .jump_if_pos = saved_instr_pos,
-                        .backpatch_iffy = saved_instr_pos + 12,
-                        .jump_else_pos = dud_pos,
-                        .backpatch_else = 0
+                if (passed_op == VM::Opcode::xop_jump_not_if) {
+                    patches.emplace(Backpatch {
+                        .status = PatchStatus::patch_skip_truthy,
+                        .jump_pos = instruction_pos,
+                        .jump_patch = dud_num
                     });
-                } else if (temp_op == VM::Opcode::xop_jump) {
-                    m_backpatches.top().jump_else_pos = saved_instr_pos;
+                } else if (passed_op == VM::Opcode::xop_jump) {
+                    patches.top().jump_patch = instruction_pos;
+                    patches.emplace(Backpatch {
+                        .status = PatchStatus::patch_skip_falsy,
+                        .jump_pos = instruction_pos,
+                        .jump_patch = dud_num
+                    });
+                } else if (passed_op == VM::Opcode::xop_noop) {
+                    patches.top().jump_patch = instruction_pos;
                 }
             };
 
-            auto patch_jump = [&, this]() {
-                if (m_backpatches.empty()) {
+            auto patch_jump = [&result, &byte_total, &patches]() {
+                if (patches.empty()) {
                     return;
                 }
 
-                auto& patch_info = m_backpatches.top();
+                if (patches.top().status == PatchStatus::patch_done) {
+                    patches.pop();
+                }
 
-                if (patch_info.pending_units == 1) {
-                    /// @note After emitting the truthy block, place a `jmp` to skip execution of the else branch for correctness. This jump will be patched too on any fallthrough through these guard clauses.
-                    patch_info.backpatch_else = m_byte_count;
-
-                    m_backpatches.push(Backpatch {
-                        .pending_units = 1,
-                        .jump_if_pos = dud_pos,
-                        .backpatch_iffy = dud_pos,
-                        .jump_else_pos = m_byte_count,
-                        .backpatch_else = dud_pos,
-                    });
-
-                    emit_opcode(VM::Opcode::xop_jump);
-                    emit_locator(Locator {
-                        .region = Region::none,
-                        .id = dud_pos
-                    });
-
-                    return;
-                } else if (patch_info.pending_units == 0) {
-                    patch_info.backpatch_else = m_byte_count;
-
-                    if (m_backpatches.size() >= 2) {
-                        const auto saved_patch = patch_info;
-                        m_backpatches.pop();
-
-                        /// @note Set previous backpatch to patch the pre-if falsy-jmp to goto the else-skipping jump.
-                        const auto prev_jump_dest = m_byte_count - 6;
-                        m_backpatches.top().backpatch_else = prev_jump_dest;
-                        const auto prev_target_pos = m_backpatches.top().jump_else_pos + 2;
-
-                        result[prev_target_pos] = prev_jump_dest & 0x000000ff;
-                        result[prev_target_pos + 1] = (prev_jump_dest & 0x0000ff00) >> 8;
-                        result[prev_target_pos + 2] = (prev_jump_dest & 0x00ff0000) >> 16;
-                        result[prev_target_pos + 3] = (prev_jump_dest & 0xff000000) >> 24;
-
-                        m_backpatches.push(saved_patch);
-                    }
-                } else {
-                    m_backpatches.pop(); // todo: remove??
+                if (!patch_usable(patches.top())) {
                     return;
                 }
 
-                const auto [pending_units, if_jmp_idx, if_jmp_target, else_jmp_idx, else_jmp_target] = m_backpatches.top();
+                const auto& [patch_tag, patch_jump_pos, patch_jump_arg] = patches.top();
+                const auto patch_jump_arg_pos = patch_jump_pos + 2;
 
-                if (if_jmp_idx != dud_pos && if_jmp_target != dud_pos) {
-                    /// @note Uses +2 to pass the opcode and argument tag (Region)
-                    const auto jmp_if_arg_pos = if_jmp_idx + 2;
+                result[patch_jump_arg_pos] = (patch_jump_arg & 0x000000ff);
+                result[patch_jump_arg_pos + 1] = (patch_jump_arg & 0x0000ff00) >> 8;
+                result[patch_jump_arg_pos + 2] = (patch_jump_arg & 0x00ff0000) >> 16;
+                result[patch_jump_arg_pos + 3] = (patch_jump_arg & 0xff000000) >> 24;
 
-                    result[jmp_if_arg_pos] = if_jmp_target & 0x000000ff;
-                    result[jmp_if_arg_pos + 1] = (if_jmp_target & 0x0000ff00) >> 8;
-                    result[jmp_if_arg_pos + 2] = (if_jmp_target & 0x00ff0000) >> 16;
-                    result[jmp_if_arg_pos + 3] = (if_jmp_target & 0xff000000) >> 24;
-                }
-
-                if (else_jmp_idx != dud_pos && else_jmp_target != dud_pos) {
-                    /// @note Uses +2 to pass the opcode and argument tag (Region)
-                    const auto jmp_else_arg_pos = else_jmp_idx + 2;
-                    
-                    result[jmp_else_arg_pos] = else_jmp_target & 0x000000ff;
-                    result[jmp_else_arg_pos + 1] = (else_jmp_target & 0x0000ff00) >> 8;
-                    result[jmp_else_arg_pos + 2] = (else_jmp_target & 0x00ff0000) >> 16;
-                    result[jmp_else_arg_pos + 3] = (else_jmp_target & 0xff000000) >> 24;
-                }
+                patches.top().status = PatchStatus::patch_done;
             };
 
-            m_incoming.push(0);
+            incoming.push(0);
 
-            while (!m_incoming.empty()) {
-                // 1. get next node.
-                const int node_id = m_incoming.front();
-                m_incoming.pop();
+            while (!incoming.empty()) {
+                const auto& node_id = incoming.top();
+                incoming.pop();
 
-                if (node_id == dud_pos || m_visited.contains(node_id)) {
+                if (node_id == dud_num || visited.contains(node_id)) {
                     continue;
                 }
 
-                // 2. emit each step in the node while updating byte count.
-                // 2b. If the step is a jump operation, push a pending Backpatch...
-                // 2c. Update any previously pending backpatch if it exists after a L/R unit is emitted.
-                if (ir_steps[node_id].index() == 0) {
-                    const auto& [unit_steps, unit_next] = std::get<Unit>(ir_steps[node_id]);
+                const auto& ir_unit = ir_steps[node_id];
 
-                    for (const auto& step : unit_steps) {
+                if (ir_unit.index() == 0) {
+                    const auto& [steps, next_id] = std::get<Unit>(ir_unit);
+
+                    for (const auto& step : steps) {
                         emit_step(step);
                     }
 
                     patch_jump();
 
-                    m_visited.insert(node_id);
-
-                    // 3. Queue next children for processing...
-                    if (!m_visited.contains(unit_next)) {
-                        m_incoming.push(unit_next);
-                    }
-
-                    if (!m_backpatches.empty()) {
-                        --m_backpatches.top().pending_units;
-                    }
+                    incoming.push(next_id);
+                    visited.insert(node_id);
                 } else {
-                    const auto& [truthy_next, falsy_next] = std::get<Juncture>(ir_steps[node_id]);
+                    const auto& [truthy_unit_id, falsy_unit_id] = std::get<Juncture>(ir_unit);
 
-                    // 3. Queue next children for processing...
-                    if (!m_visited.contains(truthy_next)) {
-                        m_incoming.push(truthy_next);
-
-                        if (!m_backpatches.empty()) {
-                            ++m_backpatches.top().pending_units;
-                        }
-                    }
-
-                    if (!m_visited.contains(falsy_next)) {
-                        m_incoming.push(falsy_next);
-
-                        if (!m_backpatches.empty()) {
-                            ++m_backpatches.top().pending_units;
-                        }
-                    }
-
-                    m_visited.insert(node_id);
+                    incoming.push(falsy_unit_id);
+                    incoming.push(truthy_unit_id);
+                    visited.insert(node_id);
                 }
             }
 

@@ -33,6 +33,7 @@
  - **LOG_OR**
  - **JUMP** offset-id
  - **JUMP_IF** offset-id
+ - **JUMP_NOT_IF** offset-id
  - **ENTER**
     - Places a NULL placeholder on the stack similar to an EBP marker on x86.
  - **RET** result-location / result-id
