@@ -34,11 +34,10 @@
  - **JUMP** offset-id
  - **JUMP_IF** offset-id
  - **JUMP_NOT_IF** offset-id
- - **ENTER**
-    - Places a NULL placeholder on the stack similar to an EBP marker on x86.
  - **RET** result-location / result-id
-    - Removes the stack frame's items on the stack until a placeholder NULL is reached (like the base pointer in ASM). Then replaces NULL with the result.
+    - Removes the stack frame's items on the stack until the temporary callee ref., and it then replaces it with the result. Then sets IP to the return address from the call frame.
  - **CALL** func-id, args-n
+    - Places function ref. on the stack and creates a call frame with the return address (location in caller) and an arg-list of all pushed param. values.
  - **CALL_NATIVE** unit-id, func-id, args-n
 
 #### Error Codes
