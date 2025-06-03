@@ -6,11 +6,6 @@
 #include "codegen/graph_pass.hpp"
 
 namespace XLang::Codegen {
-    template <typename... Types>
-    struct vprinter_overloads : Types... {
-        using Types::operator()...;
-    };
-
     [[nodiscard]] std::string_view get_opcode_name(VM::Opcode opcode) noexcept;
 
     [[nodiscard]] std::string_view get_region_name(Region region) noexcept;

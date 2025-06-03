@@ -79,7 +79,7 @@ namespace XLang::Codegen {
             "heap",
             "routines",
             "frame_slot",
-            "none"
+            "none",
         };
     };
 }

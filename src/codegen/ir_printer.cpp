@@ -28,7 +28,6 @@ namespace XLang::Codegen {
         "jump",
         "jump_if",
         "jump_not_if",
-        "enter",
         "ret",
         "call",
         "call_native"
@@ -39,6 +38,7 @@ namespace XLang::Codegen {
         "stack",
         "heap",
         "routines",
+        "frame_slot",
         "none"
     };
 

@@ -8,8 +8,8 @@ namespace XLang::Codegen {
         temp_stack,
         obj_heap,
         routines,
-        none,
         frame_slot,
+        none,
         last
     };
 
