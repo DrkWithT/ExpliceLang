@@ -1,6 +1,13 @@
 #pragma once
 
 namespace XLang::VM {
+    enum class InstructionArity : unsigned char {
+        xia_0,
+        xia_1,
+        xia_2,
+        xia_3
+    };
+
     enum class Opcode : unsigned char {
         xop_halt,
         xop_noop,
@@ -24,6 +31,7 @@ namespace XLang::VM {
         xop_log_or,
         xop_jump,
         xop_jump_if,
+        xop_jump_not_if,
         xop_enter,
         xop_ret,
         xop_call,
@@ -40,5 +48,10 @@ namespace XLang::VM {
         xerr_heap_error,
         xerr_memory_exceeded,
         xerr_general,
+    };
+
+    enum class RoutineType : unsigned char {
+        xrt_virtual,
+        xrt_native
     };
 }

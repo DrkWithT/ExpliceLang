@@ -65,8 +65,15 @@ namespace XLang::Codegen {
         /// @note Only use for Juncture nodes.
         [[maybe_unused]] bool connect_neighbor(int target_id, int left_id, int right_id);
 
+        /// @note Use for passes which can mutate the CFG.
         template <template <typename, typename> typename Pass, typename Result, typename Policy>
         Result take_pass(Pass<Result, Policy>& pass) {
+            return pass.process(*this);
+        }
+
+        /// @note Use for passes which don't mutate the CFG.
+        template <template <typename, typename> typename Pass, typename Result, typename Policy>
+        Result take_pass(Pass<Result, Policy>& pass) const& {
             return pass.process(*this);
         }
     };

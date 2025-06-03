@@ -3,6 +3,7 @@
 #include <string_view>
 #include "codegen/steps.hpp"
 #include "codegen/flow_nodes.hpp"
+#include "codegen/graph_pass.hpp"
 
 namespace XLang::Codegen {
     template <typename... Types>
@@ -14,11 +15,11 @@ namespace XLang::Codegen {
 
     [[nodiscard]] std::string_view get_region_name(Region region) noexcept;
 
-    class FlowGraphPrinter {
+    class IRPrinter {
     public:
-        FlowGraphPrinter();
+        IRPrinter();
 
-        void operator()(const XLang::Codegen::FlowStore& all_flow_graphs);
+        void operator()(const XLang::Codegen::IRStore& all_ir);
 
     private:
         void print_node_box(const NodeUnion& node_box);
