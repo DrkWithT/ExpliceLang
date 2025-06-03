@@ -96,22 +96,6 @@ namespace XLang::Codegen {
         return m_current_params_map.size();
     }
 
-    int GraphPass::curr_const_id() noexcept {
-        return next_const_id() - 1;
-    }
-
-    int GraphPass::curr_local_id() noexcept {
-        return next_local_id() - 1;
-    }
-
-    int GraphPass::curr_func_id() noexcept {
-        return next_func_id() - 1;
-    }
-
-    int GraphPass::curr_param_id() noexcept {
-        return next_param_id() - 1;
-    }
-
     Locator GraphPass::new_obj_location(Semantics::ArrayType array_tag) {
         return {
             .region = Region::obj_heap,
@@ -386,16 +370,18 @@ namespace XLang::Codegen {
         const auto& expr_token = expr.token;
         auto literal_lexeme = Frontend::peek_lexeme(expr_token, m_old_src);
 
-        switch (primitive_tag) {
-        case Semantics::TypeTag::x_type_bool:
-        case Semantics::TypeTag::x_type_int:
-        case Semantics::TypeTag::x_type_float:
+        if (primitive_tag == Semantics::TypeTag::x_type_bool || primitive_tag == Semantics::TypeTag::x_type_int || primitive_tag == Semantics::TypeTag::x_type_float) {
             return record_const_primitive(primitive_tag, expr_token);
-        case Semantics::TypeTag::x_type_unknown:
+        } else if (primitive_tag == Semantics::TypeTag::x_type_unknown) {
             /// @note Handle identifiers here...
-            return lookup_named_location(literal_lexeme);
-        default:
-            break;
+            auto name_loc = lookup_named_location(literal_lexeme);
+
+            place_step(UnaryStep {
+                .op = VM::Opcode::xop_push,
+                .arg_0 = name_loc
+            });
+
+            return name_loc;
         }
 
         throw std::logic_error {"String codegen unsupported!\n"};
@@ -493,7 +479,7 @@ namespace XLang::Codegen {
         } else {
             var_init_locator = Locator {
                 .region = Region::temp_stack,
-                .id = curr_local_id()
+                .id = next_local_id()
             };
         }
 
