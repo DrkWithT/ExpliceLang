@@ -9,6 +9,7 @@ namespace XLang::Codegen {
         obj_heap,
         routines,
         none,
+        frame_slot,
         last
     };
 

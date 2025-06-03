@@ -60,6 +60,7 @@ namespace XLang::Codegen {
 
         HeapAllocator m_heap_all;
         NameLocatorRecord m_current_name_map;
+        NameLocatorRecord m_current_params_map;
         NameLocatorRecord m_global_func_map;
         ProtoConstMap m_const_map;
 
@@ -83,9 +84,11 @@ namespace XLang::Codegen {
         [[nodiscard]] int next_const_id() noexcept;
         [[nodiscard]] int next_local_id() noexcept;
         [[nodiscard]] int next_func_id() noexcept;
+        [[nodiscard]] int next_param_id() noexcept;
         [[nodiscard]] int curr_const_id() noexcept;
         [[nodiscard]] int curr_local_id() noexcept;
         [[nodiscard]] int curr_func_id() noexcept;
+        [[nodiscard]] int curr_param_id() noexcept;
         [[nodiscard]] Locator new_obj_location(Semantics::ArrayType array_tag);
         [[nodiscard]] Locator new_obj_location(Semantics::TupleType tuple_tag);
         [[maybe_unused]] bool delete_location(const Locator& loc);

@@ -1,4 +1,3 @@
-#include <iostream>
 #include <utility>
 #include "codegen/graph_pass.hpp"
 #include "codegen/steps.hpp"
@@ -93,6 +92,10 @@ namespace XLang::Codegen {
         return m_global_func_map.size();
     }
 
+    int GraphPass::next_param_id() noexcept {
+        return m_current_params_map.size();
+    }
+
     int GraphPass::curr_const_id() noexcept {
         return next_const_id() - 1;
     }
@@ -103,6 +106,10 @@ namespace XLang::Codegen {
 
     int GraphPass::curr_func_id() noexcept {
         return next_func_id() - 1;
+    }
+
+    int GraphPass::curr_param_id() noexcept {
+        return next_param_id() - 1;
     }
 
     Locator GraphPass::new_obj_location(Semantics::ArrayType array_tag) {
@@ -131,12 +138,15 @@ namespace XLang::Codegen {
     }
 
     const Locator& GraphPass::lookup_named_location(std::string_view name) const {
-        std::cout << "codegen:graph_pass.cpp:lookup_named_location: " << name << '\n';
+        /// @note Check for params. first since they're processed 1st.
+        if (auto param_it = m_current_params_map.find(name); param_it != m_current_params_map.end()) {
+            return param_it->second;
+        }
+
         return m_current_name_map.at(name);
     }
 
     const Locator& GraphPass::lookup_callable_name(std::string_view name) const {
-        std::cout << "codegen:graph_pass.cpp:lookup_callable_name: " << name << '\n';
         return m_global_func_map.at(name);
     }
 
@@ -147,6 +157,7 @@ namespace XLang::Codegen {
     void GraphPass::leave_record() {
         m_const_map.clear();
         m_current_name_map.clear();
+        m_current_params_map.clear();
     }
 
     void GraphPass::place_step(StepUnion step) {
@@ -311,7 +322,7 @@ namespace XLang::Codegen {
 
 
     GraphPass::GraphPass(std::string_view old_source)
-    : m_heap_all {}, m_current_name_map {}, m_global_func_map {}, m_const_map {}, m_func_consts {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source}, m_main_func_idx {dud_offset} {}
+    : m_heap_all {}, m_current_name_map {}, m_current_params_map {}, m_global_func_map {}, m_const_map {}, m_func_consts {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source}, m_main_func_idx {dud_offset} {}
 
     std::any GraphPass::visit_literal(const Syntax::Literal& expr) {
         auto record_const_primitive = [this](Semantics::TypeTag tag, const Frontend::Token& primitive_token) {
@@ -320,7 +331,6 @@ namespace XLang::Codegen {
             auto const_primitive_id = dud_offset;
 
             if (m_const_map.find(literal_lexeme) != m_const_map.end()) {
-                std::cout << "codegen:graph_pass.cpp:visit_literal: getting '" << literal_lexeme << "'\n";
                 const_primitive_id = m_const_map.at(literal_lexeme).id;
 
                 place_step(UnaryStep {
@@ -444,13 +454,16 @@ namespace XLang::Codegen {
     }
 
     std::any GraphPass::visit_call(const Syntax::Call& expr) {
-        std::cout << "codegen:graph_pass.cpp:visit_call...\n";
         const auto func_locator = lookup_callable_name(expr.func_name);
-        auto arg_it = static_cast<int>(expr.args.size()) - 1;
-        auto args_n = arg_it + 1;
+        auto args_n = static_cast<int>(expr.args.size());
 
-        for (; arg_it >= 0; arg_it--) {
-            expr.args[arg_it]->accept_visitor(*this);
+        place_step(UnaryStep {
+            .op = VM::Opcode::xop_push,
+            .arg_0 = func_locator
+        });
+
+        for (const auto& arg_expr : expr.args) {
+            arg_expr->accept_visitor(*this);
         }
 
         place_step(BinaryStep {
@@ -491,7 +504,6 @@ namespace XLang::Codegen {
 
     std::any GraphPass::visit_function_decl(const Syntax::FunctionDecl& stmt) {
         auto func_name = Frontend::peek_lexeme(stmt.name, m_old_src);
-        std::cout << "codegen:graph_pass.cpp:visit_function_decl --> '" << func_name << "'\n";
 
         const auto func_id = next_func_id();
 
@@ -510,17 +522,13 @@ namespace XLang::Codegen {
             .next = dud_offset
         });
 
-        /// 1. Enter call frame of function
-        place_step(NonaryStep {
-            .op = VM::Opcode::xop_enter
-        });
-
+        /// 1. Enter param. list of function
         for (const auto& arg_param : stmt.args) {
             auto param_name = Frontend::peek_lexeme(arg_param.name, m_old_src);
 
-            m_current_name_map[param_name] = {
-                .region = Region::temp_stack,
-                .id = next_local_id()
+            m_current_params_map[param_name] = {
+                .region = Region::frame_slot,
+                .id = next_param_id()
             };
         }
 
