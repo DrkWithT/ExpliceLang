@@ -71,8 +71,8 @@ namespace XLang::Codegen {
             1,
             0,
             1,
-            1,
-            2
+            2,
+            3
         };
 
         static constexpr std::array<std::string_view, static_cast<std::size_t>(Region::last)> cm_region_names = {

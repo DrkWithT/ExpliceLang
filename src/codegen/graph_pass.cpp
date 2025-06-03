@@ -1,3 +1,4 @@
+#include <iostream>
 #include <utility>
 #include "codegen/graph_pass.hpp"
 #include "codegen/steps.hpp"
@@ -130,10 +131,12 @@ namespace XLang::Codegen {
     }
 
     const Locator& GraphPass::lookup_named_location(std::string_view name) const {
+        std::cout << "codegen:graph_pass.cpp:lookup_named_location: " << name << '\n';
         return m_current_name_map.at(name);
     }
 
     const Locator& GraphPass::lookup_callable_name(std::string_view name) const {
+        std::cout << "codegen:graph_pass.cpp:lookup_callable_name: " << name << '\n';
         return m_global_func_map.at(name);
     }
 
@@ -317,6 +320,7 @@ namespace XLang::Codegen {
             auto const_primitive_id = dud_offset;
 
             if (m_const_map.find(literal_lexeme) != m_const_map.end()) {
+                std::cout << "codegen:graph_pass.cpp:visit_literal: getting '" << literal_lexeme << "'\n";
                 const_primitive_id = m_const_map.at(literal_lexeme).id;
 
                 place_step(UnaryStep {
@@ -440,15 +444,22 @@ namespace XLang::Codegen {
     }
 
     std::any GraphPass::visit_call(const Syntax::Call& expr) {
+        std::cout << "codegen:graph_pass.cpp:visit_call...\n";
         const auto func_locator = lookup_callable_name(expr.func_name);
+        auto arg_it = static_cast<int>(expr.args.size()) - 1;
+        auto args_n = arg_it + 1;
 
-        for (int arg_it = static_cast<int>(expr.args.size()); arg_it >= 0; --arg_it) {
+        for (; arg_it >= 0; arg_it--) {
             expr.args[arg_it]->accept_visitor(*this);
         }
 
-        place_step(UnaryStep {
+        place_step(BinaryStep {
             .op = VM::Opcode::xop_call,
-            .arg_0 = func_locator
+            .arg_0 = func_locator,
+            .arg_1 = Locator {
+                .region = Region::none,
+                .id = args_n
+            }
         });
 
         return {};
@@ -480,6 +491,19 @@ namespace XLang::Codegen {
 
     std::any GraphPass::visit_function_decl(const Syntax::FunctionDecl& stmt) {
         auto func_name = Frontend::peek_lexeme(stmt.name, m_old_src);
+        std::cout << "codegen:graph_pass.cpp:visit_function_decl --> '" << func_name << "'\n";
+
+        const auto func_id = next_func_id();
+
+        /// @note Mark which compiled routine is the main one, as it's invoked by the VM.
+        if (func_name == "main") {
+            m_main_func_idx = func_id;
+        }
+
+        m_global_func_map[func_name] = {
+            .region = Region::routines,
+            .id = func_id
+        };
 
         place_node(Unit {
             .steps = {},
@@ -501,18 +525,6 @@ namespace XLang::Codegen {
         }
 
         stmt.body->accept_visitor(*this);
-
-        const auto func_id = next_func_id();
-
-        /// @note Mark which compiled routine is the main one, as it's invoked by the VM.
-        if (func_name == "main") {
-            m_main_func_idx = func_id;
-        }
-
-        m_global_func_map[func_name] = {
-            .region = Region::routines,
-            .id = func_id
-        };
 
         commit_current_consts();
         leave_record();
