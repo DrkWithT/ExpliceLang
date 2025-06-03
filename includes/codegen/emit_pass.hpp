@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <utility>
 #include <memory>
 #include <set>
@@ -119,20 +120,20 @@ namespace XLang::Codegen {
                 ++byte_total;
             };
 
-            auto emit_arg = [&result, &byte_total](const Locator& arg) {
+            auto emit_arg = [&](const Locator& arg) {
                 const auto& [arg_tag, arg_num] = arg;
                 const auto tag = static_cast<VM::RuntimeByte>(arg_tag);
 
-                result[byte_total] = tag;
+                result.push_back(tag);
                 ++byte_total;
-                result[byte_total] = (tag & 0x000000ff);
-                result[byte_total + 1] = (tag & 0x0000ff00) >> 8;
-                result[byte_total + 2] = (tag & 0x00ff0000) >> 16;
-                result[byte_total + 3] = (tag & 0xff000000) >> 24;
+                result.push_back(arg_num & 0x000000ff);
+                result.push_back((arg_num & 0x0000ff00) >> 8);
+                result.push_back((arg_num & 0x00ff0000) >> 16);
+                result.push_back((arg_num & 0xff000000) >> 24);
                 byte_total += 4;
             };
 
-            auto emit_step = [&result, &byte_total, &patches](const StepUnion& step) {
+            auto emit_step = [&](const StepUnion& step) {
                 const auto step_var_idx = step.index();
                 const auto instruction_pos = byte_total;
                 VM::Opcode passed_op = VM::Opcode::xop_noop;
@@ -179,13 +180,9 @@ namespace XLang::Codegen {
                 }
             };
 
-            auto patch_jump = [&result, &byte_total, &patches]() {
+            auto patch_jump = [&result, &patches]() {
                 if (patches.empty()) {
                     return;
-                }
-
-                if (patches.top().status == PatchStatus::patch_done) {
-                    patches.pop();
                 }
 
                 if (!patch_usable(patches.top())) {
@@ -200,13 +197,13 @@ namespace XLang::Codegen {
                 result[patch_jump_arg_pos + 2] = (patch_jump_arg & 0x00ff0000) >> 16;
                 result[patch_jump_arg_pos + 3] = (patch_jump_arg & 0xff000000) >> 24;
 
-                patches.top().status = PatchStatus::patch_done;
+                patches.pop();
             };
 
             incoming.push(0);
 
             while (!incoming.empty()) {
-                const auto& node_id = incoming.top();
+                const auto node_id = incoming.top();
                 incoming.pop();
 
                 if (node_id == dud_num || visited.contains(node_id)) {
@@ -233,7 +230,10 @@ namespace XLang::Codegen {
                     incoming.push(truthy_unit_id);
                     visited.insert(node_id);
                 }
+
             }
+
+            patch_jump();
 
             return result;
         }
