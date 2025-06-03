@@ -38,8 +38,8 @@
     - Places a NULL placeholder on the stack similar to an EBP marker on x86.
  - **RET** result-location / result-id
     - Removes the stack frame's items on the stack until a placeholder NULL is reached (like the base pointer in ASM). Then replaces NULL with the result.
- - **CALL** func-id
- - **CALL_NATIVE** unit-id, func-id
+ - **CALL** func-id, args-n
+ - **CALL_NATIVE** unit-id, func-id, args-n
 
 #### Error Codes
  - **0** normal

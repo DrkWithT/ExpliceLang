@@ -1,0 +1,20 @@
+func fib(n: int,): int {
+    if (n == 0 || n == 1) {
+        return 1;
+    }
+
+    const a: int = n - 1;
+    const b: int = n - 2;
+
+    return fib(a,) + fib(b,);
+}
+
+func main(): int {
+    const ans: int = fib(9,);
+
+    if (ans != 34) {
+        return 1;
+    }
+
+    return 0;
+}
