@@ -243,7 +243,6 @@ namespace XLang::Frontend {
         };
 
         std::string_view lexeme_view = peek_lexeme(temp, m_viewed);
-        std::cout << "frontend:lexer.cpp:lex_word --> '" << lexeme_view << "'\n";
 
         if (const auto tag_it = m_items.find(lexeme_view); tag_it != m_items.cend()) {
             temp.tag = m_items.at(lexeme_view);
