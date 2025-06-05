@@ -55,3 +55,6 @@
    1. Arity prefix: 0, 1, 2, 3 (how many `Locator` arguments are present after the opcode)
    2. Opcode: 1 byte for a `VM::Opcode`.
    3. Arguments: An arity-prefix sized sequence of `Locator` arguments.
+
+### Sample Bytecode Dump (Test 3b - Fibonacci)
+<img src="../doc_assets/Fib_Codegen.png" width="25%" alt="code dump img">

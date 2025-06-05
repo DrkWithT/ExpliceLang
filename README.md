@@ -23,6 +23,7 @@ Xplice is my first ever register-bytecode-based language. The goal of this langu
  - **TODO**: Recompile project and fix function codegen:
     - Functions must persist named parameters until their returning, so store them in an arg-list within a call frame.
     - Modify `RET` instruction to have a `none:0` argument mode for returning whatever is at the stack's top.
+    - Fix logic for VM arithmetic, compare operations to use built-in methods for Value to handle them without bloating the VM impl.
  - Add support for imports of native functions!
  - Add while loop support.
  - Add array and tuple parsing support.
