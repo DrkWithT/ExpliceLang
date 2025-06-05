@@ -40,7 +40,7 @@ namespace XLang::Frontend {
         void update_source_pos(char symbol) noexcept;
         Token lex_single(LexTag tag) noexcept;
         Token lex_between(char delim, LexTag tag) noexcept;
-        Token lex_spacing() noexcept;
+        void skip_spaces() noexcept;
         Token lex_number() noexcept;
         Token lex_word();
         Token lex_operator();

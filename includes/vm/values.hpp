@@ -37,9 +37,21 @@ namespace XLang::VM {
         [[nodiscard]] bool is_boolean() const noexcept;
         [[nodiscard]] bool is_numeric() const noexcept;
         [[nodiscard]] bool is_object() const noexcept;
+        [[nodiscard]] bool is_func_reference() const noexcept;
 
         // [[nodiscard]] FieldReference access_property(int id) noexcept;
         // [[nodiscard]] FieldReference access_property(std::string_view name) noexcept;
+
+        [[nodiscard]] Value add(const Value& rhs) const;
+        [[nodiscard]] Value subtract(const Value& rhs) const;
+        [[nodiscard]] Value multiply(const Value& rhs) const;
+        [[nodiscard]] Value divide(const Value& rhs) const;
+        [[nodiscard]] Value compare_eq(const Value& rhs) const;
+        [[nodiscard]] Value compare_ne(const Value& rhs) const;
+        [[nodiscard]] Value compare_lt(const Value& rhs) const;
+        [[nodiscard]] Value compare_gt(const Value& rhs) const;
+        [[nodiscard]] Value logical_and(const Value& rhs) const;
+        [[nodiscard]] Value logical_or(const Value& rhs) const;
 
     private:
         box_type m_data;

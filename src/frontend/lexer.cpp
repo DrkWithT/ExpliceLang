@@ -1,4 +1,5 @@
 #include <initializer_list>
+#include <iostream>
 #include "frontend/token.hpp"
 #include "frontend/lexer.hpp"
 
@@ -44,6 +45,8 @@ namespace XLang::Frontend {
     }
 
     Token Lexer::operator()() {
+        skip_spaces();
+
         if (at_end()) {
             return {
                 .tag = LexTag::eof,
@@ -83,9 +86,7 @@ namespace XLang::Frontend {
             break;
         }
 
-        if (match_spacing(symbol_peeked)) {
-            return lex_spacing();
-        } else if (match_digit(symbol_peeked)) {
+        if (match_digit(symbol_peeked)) {
             return lex_number();
         } else if (match_alpha(symbol_peeked)) {
             return lex_word();
@@ -157,31 +158,17 @@ namespace XLang::Frontend {
         };
     }
 
-    Token Lexer::lex_spacing() noexcept {
-        auto start = m_pos;
-        auto len = 0;
-        const auto line = m_line;
-        const auto col = m_col;
-
+    void Lexer::skip_spaces() noexcept {
         while (!at_end()) {
             const auto symbol = m_viewed[m_pos];
-            
+
             if (!match_spacing(symbol)) {
                 break;
             }
             
             update_source_pos(symbol);
             ++m_pos;
-            ++len;
         }
-
-        return {
-            .tag = LexTag::spaces,
-            .start = start,
-            .length = len,
-            .line = line,
-            .column = col
-        };
     }
 
     Token Lexer::lex_number() noexcept {

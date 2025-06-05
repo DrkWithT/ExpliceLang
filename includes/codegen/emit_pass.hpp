@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include <utility>
 #include <memory>
 #include <set>
@@ -57,8 +56,8 @@ namespace XLang::Codegen {
 
             m_result.get()->entry_func_id = entry_point_id;
 
-            for (const auto& [temp_cfg_id, temp_cfg] : cfg_dict) {
-                m_result.get()->func_chunks.operator[](temp_cfg_id) = process(temp_cfg);
+            for (const auto& temp_cfg : cfg_dict) {
+                m_result.get()->func_chunks.operator[](m_ir_unit_idx) = process(temp_cfg);
                 clear_current_state();
             }
 

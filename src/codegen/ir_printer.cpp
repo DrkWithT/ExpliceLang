@@ -28,7 +28,6 @@ namespace XLang::Codegen {
         "jump",
         "jump_if",
         "jump_not_if",
-        "enter",
         "ret",
         "call",
         "call_native"
@@ -39,6 +38,7 @@ namespace XLang::Codegen {
         "stack",
         "heap",
         "routines",
+        "frame_slot",
         "none"
     };
 
@@ -77,7 +77,8 @@ namespace XLang::Codegen {
             }
         };
 
-        for (const auto& [func_id, func_flows] : *all_ir.func_cfgs) {
+        auto func_id = 0;
+        for (const auto& func_flows : *all_ir.func_cfgs) {
             std::print("\nFunction chunk {}:\n", func_id);
 
             std::print("\nConst. Chunk {}:\n", func_id);
@@ -85,6 +86,8 @@ namespace XLang::Codegen {
 
             std::print("\nInstr. Chunk {}:\n", func_id);
             print_graph(func_flows);
+
+            ++func_id;
         }
     }
 

@@ -92,16 +92,8 @@ namespace XLang::Codegen {
         return m_global_func_map.size();
     }
 
-    int GraphPass::curr_const_id() noexcept {
-        return next_const_id() - 1;
-    }
-
-    int GraphPass::curr_local_id() noexcept {
-        return next_local_id() - 1;
-    }
-
-    int GraphPass::curr_func_id() noexcept {
-        return next_func_id() - 1;
+    int GraphPass::next_param_id() noexcept {
+        return m_current_params_map.size();
     }
 
     Locator GraphPass::new_obj_location(Semantics::ArrayType array_tag) {
@@ -130,6 +122,11 @@ namespace XLang::Codegen {
     }
 
     const Locator& GraphPass::lookup_named_location(std::string_view name) const {
+        /// @note Check for params. first since they're processed 1st.
+        if (auto param_it = m_current_params_map.find(name); param_it != m_current_params_map.end()) {
+            return param_it->second;
+        }
+
         return m_current_name_map.at(name);
     }
 
@@ -144,6 +141,7 @@ namespace XLang::Codegen {
     void GraphPass::leave_record() {
         m_const_map.clear();
         m_current_name_map.clear();
+        m_current_params_map.clear();
     }
 
     void GraphPass::place_step(StepUnion step) {
@@ -162,7 +160,7 @@ namespace XLang::Codegen {
         m_nodes.emplace_back(std::move(node_box));
     }
 
-    void GraphPass::commit_nodes_to_graph(int current_func_id, bool all_decls_done) {
+    void GraphPass::commit_nodes_to_graph(bool all_decls_done) {
         if (!m_graph) {
             return;
         }
@@ -200,7 +198,7 @@ namespace XLang::Codegen {
         }
 
         /// 5. Commit graph to FlowStore.
-        m_result->operator[](current_func_id) = std::move(*m_graph);
+        m_result->emplace_back(std::move(*m_graph));
         m_nodes.clear();
 
         if (!all_decls_done) {
@@ -308,7 +306,7 @@ namespace XLang::Codegen {
 
 
     GraphPass::GraphPass(std::string_view old_source)
-    : m_heap_all {}, m_current_name_map {}, m_global_func_map {}, m_const_map {}, m_func_consts {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source}, m_main_func_idx {dud_offset} {}
+    : m_heap_all {}, m_current_name_map {}, m_current_params_map {}, m_global_func_map {}, m_const_map {}, m_func_consts {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source}, m_main_func_idx {dud_offset} {}
 
     std::any GraphPass::visit_literal(const Syntax::Literal& expr) {
         auto record_const_primitive = [this](Semantics::TypeTag tag, const Frontend::Token& primitive_token) {
@@ -372,16 +370,18 @@ namespace XLang::Codegen {
         const auto& expr_token = expr.token;
         auto literal_lexeme = Frontend::peek_lexeme(expr_token, m_old_src);
 
-        switch (primitive_tag) {
-        case Semantics::TypeTag::x_type_bool:
-        case Semantics::TypeTag::x_type_int:
-        case Semantics::TypeTag::x_type_float:
+        if (primitive_tag == Semantics::TypeTag::x_type_bool || primitive_tag == Semantics::TypeTag::x_type_int || primitive_tag == Semantics::TypeTag::x_type_float) {
             return record_const_primitive(primitive_tag, expr_token);
-        case Semantics::TypeTag::x_type_unknown:
+        } else if (primitive_tag == Semantics::TypeTag::x_type_unknown) {
             /// @note Handle identifiers here...
-            return lookup_named_location(literal_lexeme);
-        default:
-            break;
+            auto name_loc = lookup_named_location(literal_lexeme);
+
+            place_step(UnaryStep {
+                .op = VM::Opcode::xop_push,
+                .arg_0 = name_loc
+            });
+
+            return name_loc;
         }
 
         throw std::logic_error {"String codegen unsupported!\n"};
@@ -441,14 +441,19 @@ namespace XLang::Codegen {
 
     std::any GraphPass::visit_call(const Syntax::Call& expr) {
         const auto func_locator = lookup_callable_name(expr.func_name);
+        auto args_n = static_cast<int>(expr.args.size());
 
-        for (int arg_it = static_cast<int>(expr.args.size()); arg_it >= 0; --arg_it) {
-            expr.args[arg_it]->accept_visitor(*this);
+        for (const auto& arg_expr : expr.args) {
+            arg_expr->accept_visitor(*this);
         }
 
-        place_step(UnaryStep {
+        place_step(BinaryStep {
             .op = VM::Opcode::xop_call,
-            .arg_0 = func_locator
+            .arg_0 = func_locator,
+            .arg_1 = Locator {
+                .region = Region::none,
+                .id = args_n
+            }
         });
 
         return {};
@@ -469,7 +474,7 @@ namespace XLang::Codegen {
         } else {
             var_init_locator = Locator {
                 .region = Region::temp_stack,
-                .id = curr_local_id()
+                .id = next_local_id()
             };
         }
 
@@ -480,27 +485,6 @@ namespace XLang::Codegen {
 
     std::any GraphPass::visit_function_decl(const Syntax::FunctionDecl& stmt) {
         auto func_name = Frontend::peek_lexeme(stmt.name, m_old_src);
-
-        place_node(Unit {
-            .steps = {},
-            .next = dud_offset
-        });
-
-        /// 1. Enter call frame of function
-        place_step(NonaryStep {
-            .op = VM::Opcode::xop_enter
-        });
-
-        for (const auto& arg_param : stmt.args) {
-            auto param_name = Frontend::peek_lexeme(arg_param.name, m_old_src);
-
-            m_current_name_map[param_name] = {
-                .region = Region::temp_stack,
-                .id = next_local_id()
-            };
-        }
-
-        stmt.body->accept_visitor(*this);
 
         const auto func_id = next_func_id();
 
@@ -514,10 +498,27 @@ namespace XLang::Codegen {
             .id = func_id
         };
 
+        place_node(Unit {
+            .steps = {},
+            .next = dud_offset
+        });
+
+        /// 1. Enter param. list of function
+        for (const auto& arg_param : stmt.args) {
+            auto param_name = Frontend::peek_lexeme(arg_param.name, m_old_src);
+
+            m_current_params_map[param_name] = {
+                .region = Region::frame_slot,
+                .id = next_param_id()
+            };
+        }
+
+        stmt.body->accept_visitor(*this);
+
         commit_current_consts();
         leave_record();
 
-        return func_id;
+        return {};
     }
 
     std::any GraphPass::visit_expr_stmt(const Syntax::ExprStmt& stmt) {
@@ -605,11 +606,9 @@ namespace XLang::Codegen {
         const auto decls_n = static_cast<int>(ast.size());
 
         for (auto func_decl_idx = 0; func_decl_idx < decls_n; ++func_decl_idx) {
-            auto decl_id = ast[func_decl_idx]->accept_visitor(*this);
+            ast[func_decl_idx]->accept_visitor(*this);
 
-            const auto generated_func_id = std::any_cast<int>(decl_id);
-
-            commit_nodes_to_graph(generated_func_id, func_decl_idx == decls_n - 1);
+            commit_nodes_to_graph(func_decl_idx == decls_n - 1);
         }
 
         return {

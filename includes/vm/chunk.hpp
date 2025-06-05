@@ -40,11 +40,6 @@ namespace XLang::VM {
         const Chunk& view_code() const noexcept {
             return m_code;
         }
-
-        template <typename Runtime>
-        [[nodiscard]] Errcode invoke(Runtime& vm, const ArgStore& args) const {
-            return vm.invoke_virtual_func(*this, args);
-        }
     };
 
     template <>
@@ -57,7 +52,8 @@ namespace XLang::VM {
         native_func_ptr m_ptr;
 
     public:
-        Function() = delete;
+        constexpr Function() noexcept
+        : m_ptr {nullptr} {} 
 
         Function(native_func_ptr native_func) noexcept
         : m_ptr {native_func} {}

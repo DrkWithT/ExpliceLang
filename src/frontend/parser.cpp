@@ -1,4 +1,3 @@
-#include <iostream>
 #include <utility>
 #include <stdexcept>
 #include "frontend/parser.hpp"
@@ -317,7 +316,6 @@ namespace XLang::Frontend {
         }
 
         Token func_name = peek_at(0);
-        // std::cout << "parse_function_decl(...) --> consume() call 2\n";
         consume(LexTag::identifier);
 
         // std::cout << "... parse_arg_list(...)\n";

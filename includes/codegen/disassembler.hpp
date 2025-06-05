@@ -39,7 +39,6 @@ namespace XLang::Codegen {
             "jump",
             "jump_if",
             "jump_not_if",
-            "enter",
             "ret",
             "call",
             "call_native"
@@ -69,10 +68,9 @@ namespace XLang::Codegen {
             1,
             1,
             1,
-            0,
             1,
-            1,
-            2
+            2,
+            3
         };
 
         static constexpr std::array<std::string_view, static_cast<std::size_t>(Region::last)> cm_region_names = {
@@ -80,7 +78,8 @@ namespace XLang::Codegen {
             "stack",
             "heap",
             "routines",
-            "none"
+            "frame_slot",
+            "none",
         };
     };
 }
