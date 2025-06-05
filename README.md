@@ -1,11 +1,11 @@
 ## README
 
 ### Summary
-Xplice is my first ever register-bytecode-based language. The goal of this language is to become a familiar-looking, simple, and procedural utility language. See the below points for its design philosophy.
+Xplice is my first ever stack-bytecode-based language. The goal of this language is to become a familiar-looking, simple, and procedural utility language. See the below points for its design philosophy.
 
 ### General:
  - Familiar-ish syntax to TS and C++.
- - Static, checked type system.
+ - Static, strong type system.
  - Module-based? (TODO)
  - Native function support? (TODO)
 
@@ -20,12 +20,12 @@ Xplice is my first ever register-bytecode-based language. The goal of this langu
  - [VM](./docs/vm.md)
 
 ### Roadmap:
- - **TODO**: Recompile project and fix function codegen:
-    - Functions must persist named parameters until their returning, so store them in an arg-list within a call frame.
-    - Modify `RET` instruction to have a `none:0` argument mode for returning whatever is at the stack's top.
-    - Fix logic for VM arithmetic, compare operations to use built-in methods for Value to handle them without bloating the VM impl.
- - Add support for imports of native functions!
+ - Add semantic analysis for:
+   - Name-defined checks
+   - Simple type checks for expressions
+ - Add native function support!
  - Add while loop support.
+ - Add support for imports of native functions!
  - Add array and tuple parsing support.
  - Add array and tuple codegen support.
  - Finally add string codegen support!
