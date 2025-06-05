@@ -102,7 +102,7 @@ namespace XLang::Codegen {
         void place_node(NodeUnion node_box);
 
         /// @note Puts all queued node boxes into the currently referenced `FlowGraph`, connected, before moving the graph into the referenced `FlowStore`. Assumes the current graph is initially EMPTY and function decls. are processed TOP-TO-BOTTOM!
-        void commit_nodes_to_graph(int current_func_id, bool all_decls_done);
+        void commit_nodes_to_graph(bool all_decls_done);
 
         [[nodiscard]] std::any help_gen_access(const Syntax::Binary& expr);
         [[nodiscard]] std::any help_gen_arithmetic(OpLeaning op_lean, const Syntax::Binary& expr);
@@ -120,7 +120,7 @@ namespace XLang::Codegen {
 
         [[nodiscard]] std::any visit_import(const Syntax::Import& stmt) override;
         [[nodiscard]] std::any visit_variable_decl(const Syntax::VariableDecl& stmt) override;
-        [[nodiscard]] std::any visit_function_decl(const Syntax::FunctionDecl& stmt) override;
+        [[maybe_unused]] std::any visit_function_decl(const Syntax::FunctionDecl& stmt) override;
         [[nodiscard]] std::any visit_expr_stmt(const Syntax::ExprStmt& stmt) override;
         [[nodiscard]] std::any visit_block(const Syntax::Block& stmt) override;
         [[nodiscard]] std::any visit_return(const Syntax::Return& stmt) override;

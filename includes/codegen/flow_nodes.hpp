@@ -13,7 +13,7 @@ namespace XLang::Codegen {
     using NodeUnion = std::variant<Unit, Juncture>;
     using StepUnion = std::variant<NonaryStep, UnaryStep, BinaryStep, TernaryStep>;
     using StepSequence = std::vector<StepUnion>;
-    using FlowStore = std::unordered_map<int, FlowGraph>;
+    using FlowStore = std::vector<FlowGraph>;
 
     /// @note Represents up to two child ids per node.
     struct ChildPair {

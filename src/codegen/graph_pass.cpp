@@ -160,7 +160,7 @@ namespace XLang::Codegen {
         m_nodes.emplace_back(std::move(node_box));
     }
 
-    void GraphPass::commit_nodes_to_graph(int current_func_id, bool all_decls_done) {
+    void GraphPass::commit_nodes_to_graph(bool all_decls_done) {
         if (!m_graph) {
             return;
         }
@@ -198,7 +198,7 @@ namespace XLang::Codegen {
         }
 
         /// 5. Commit graph to FlowStore.
-        m_result->operator[](current_func_id) = std::move(*m_graph);
+        m_result->emplace_back(std::move(*m_graph));
         m_nodes.clear();
 
         if (!all_decls_done) {
@@ -443,11 +443,6 @@ namespace XLang::Codegen {
         const auto func_locator = lookup_callable_name(expr.func_name);
         auto args_n = static_cast<int>(expr.args.size());
 
-        place_step(UnaryStep {
-            .op = VM::Opcode::xop_push,
-            .arg_0 = func_locator
-        });
-
         for (const auto& arg_expr : expr.args) {
             arg_expr->accept_visitor(*this);
         }
@@ -523,7 +518,7 @@ namespace XLang::Codegen {
         commit_current_consts();
         leave_record();
 
-        return func_id;
+        return {};
     }
 
     std::any GraphPass::visit_expr_stmt(const Syntax::ExprStmt& stmt) {
@@ -611,11 +606,9 @@ namespace XLang::Codegen {
         const auto decls_n = static_cast<int>(ast.size());
 
         for (auto func_decl_idx = 0; func_decl_idx < decls_n; ++func_decl_idx) {
-            auto decl_id = ast[func_decl_idx]->accept_visitor(*this);
+            ast[func_decl_idx]->accept_visitor(*this);
 
-            const auto generated_func_id = std::any_cast<int>(decl_id);
-
-            commit_nodes_to_graph(generated_func_id, func_decl_idx == decls_n - 1);
+            commit_nodes_to_graph(func_decl_idx == decls_n - 1);
         }
 
         return {

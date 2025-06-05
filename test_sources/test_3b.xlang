@@ -3,16 +3,13 @@ func fib(n: int,): int {
         return 1;
     }
 
-    const a: int = n - 1;
-    const b: int = n - 2;
-
-    return fib(a,) + fib(b,);
+    return fib((n - 1),) + fib((n - 2),);
 }
 
 func main(): int {
-    const ans: int = fib(9,);
+    const ans: int = fib(24,);
 
-    if (ans != 34) {
+    if (ans != 75025) {
         return 1;
     }
 
