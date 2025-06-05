@@ -10,8 +10,7 @@ namespace XLang::VM {
     struct CallFrame {
         ArgStore args;
         int callee_id;
-        int caller_id;
-        int caller_pos;
+        int callee_pos;
     };
 
     class VM {
@@ -19,7 +18,6 @@ namespace XLang::VM {
         VM(XpliceProgram prgm) noexcept;
 
         [[nodiscard]] Errcode run();
-        [[nodiscard]] Errcode invoke_virtual_func(const ProgramFunction& func, const ArgStore& args);
         [[nodiscard]] Errcode invoke_native_func(const NativeFunction& func, const ArgStore& args);
 
         void add_native_function(int native_id, const NativeFunction& func) noexcept;
@@ -59,7 +57,7 @@ namespace XLang::VM {
         [[nodiscard]] bool is_done() const noexcept;
 
         [[nodiscard]] Opcode decode_opcode() const noexcept;
-        [[nodiscard]] Codegen::Locator decode_arg() const noexcept;
+        [[nodiscard]] Codegen::Locator decode_arg(int arg_num) const noexcept;
         void handle_halt();
         void handle_push(const Codegen::Locator& arg);
         void handle_pop(const Codegen::Locator& arg);
@@ -72,7 +70,7 @@ namespace XLang::VM {
         void handle_arithmetic(Opcode op);
         void handle_compare(Opcode op);
         void handle_logical(Opcode op);
-        void handle_jump_if(const Codegen::Locator& arg);
+        void handle_jump_not_if(const Codegen::Locator& arg);
         void handle_return(const Codegen::Locator& arg);
         void handle_call(const Codegen::Locator& local_func_id, int argc);
         void handle_native_call(int module_id, int native_id, int argc);

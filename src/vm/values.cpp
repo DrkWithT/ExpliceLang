@@ -192,7 +192,9 @@ namespace XLang::VM {
         } else if (type_tag == ValueTag::primitive_bool) {
             return Value {std::get<bool>(m_data) < std::get<bool>(rhs.m_data)};
         } else if (type_tag == ValueTag::primitive_int) {
-            return Value {std::get<int>(m_data) < std::get<int>(rhs.m_data)};
+            const auto temp_lhs = std::get<int>(m_data);
+            const auto temp_rhs = std::get<int>(rhs.m_data);
+            return Value {temp_lhs < temp_rhs};
         } else if (type_tag == ValueTag::primitive_float) {
             return Value {std::get<float>(m_data) < std::get<float>(rhs.m_data)};
         } else {

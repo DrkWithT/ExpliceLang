@@ -5,7 +5,7 @@
 #include "frontend/parser.hpp"
 #include "codegen/graph_pass.hpp"
 #include "codegen/emit_pass.hpp"
-#include "codegen/disassembler.hpp"
+// #include "codegen/disassembler.hpp"
 #include "vm/vm.hpp"
 
 using namespace XLang;
@@ -31,6 +31,9 @@ using namespace XLang;
 
     Codegen::EmitCodePass bytecode_emitter;
     auto prgm_ptr = bytecode_emitter.process_full_ir(ir_func_constants, *ir_func_graphs, ir_main_id);
+
+    // Codegen::Disassembler bytecode_printer;
+    // bytecode_printer(*prgm_ptr);
 
     return {std::move(*prgm_ptr)};
 }

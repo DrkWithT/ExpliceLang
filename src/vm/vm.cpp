@@ -3,6 +3,8 @@
 #include "vm/vm.hpp"
 
 namespace XLang::VM {
+    static constexpr auto opcode_stride = 1;
+    static constexpr auto opcode_arg_stride = 5;
     static constexpr Codegen::Locator placeholder_arg {Codegen::Region::none, -1}; 
 
     static auto decode_i32 = [] [[nodiscard]] (const std::vector<RuntimeByte>& code_buffer, int position) noexcept {
@@ -11,19 +13,23 @@ namespace XLang::VM {
         result += code_buffer[position] & 0x000000ff;
         result += (code_buffer[position + 1] & 0x0000ff00) >> 8;
         result += (code_buffer[position + 2] & 0x00ff0000) >> 16;
-        result += (code_buffer[position + 2] & 0xff000000) >> 24;
+        result += (code_buffer[position + 3] & 0xff000000) >> 24;
 
         return result;
     };
 
     VM::VM(XpliceProgram prgm) noexcept
     : m_program_funcs {std::move(prgm)}, m_native_funcs {}, m_frames {}, m_values {}, m_iptr {0}, m_exit_status {Errcode::xerr_normal} {
-        /// NOTE: VM starts execution at main function / entry point!
+        /// NOTE: VM starts execution at main function / entry point... place main on the stack as a base for the call frame values.
+        m_values.emplace_back(Value {Codegen::Locator {
+            .region = Codegen::Region::routines,
+            .id = m_program_funcs.entry_func_id
+        }});
+
         m_frames.emplace_back(
             ArgStore {},
             m_program_funcs.entry_func_id,
-            -1,
-            -1
+            m_iptr
         );
     }
 
@@ -42,16 +48,16 @@ namespace XLang::VM {
 
             switch (op_arity) {
             case 1:
-                op_args[0] = decode_arg();
+                op_args[0] = decode_arg(0);
                 break;
             case 2:
-                op_args[0] = decode_arg();
-                op_args[1] = decode_arg();
+                op_args[0] = decode_arg(0);
+                op_args[1] = decode_arg(1);
                 break;
             case 3:
-                op_args[0] = decode_arg();
-                op_args[1] = decode_arg();
-                op_args[2] = decode_arg();
+                op_args[0] = decode_arg(0);
+                op_args[1] = decode_arg(1);
+                op_args[2] = decode_arg(2);
                 break;    
             case 0:
             default:
@@ -114,8 +120,8 @@ namespace XLang::VM {
             case Opcode::xop_jump:
                 m_iptr = op_args[0].id;
                 break;
-            case Opcode::xop_jump_if:
-                handle_jump_if(op_args[0]);
+            case Opcode::xop_jump_not_if:
+                handle_jump_not_if(op_args[0]);
                 break;
             case Opcode::xop_ret:
                 handle_return(op_args[0]);
@@ -134,15 +140,17 @@ namespace XLang::VM {
             }
         }
 
+        if (m_exit_status == Errcode::xerr_normal) {
+            const auto main_ret = std::get<int>(m_values.front().inner_box());
+
+            m_exit_status = (main_ret == 0) ? Errcode::xerr_normal : Errcode::xerr_general;
+        }
+
         return m_exit_status;
     }
 
-    Errcode VM::invoke_virtual_func(const ProgramFunction& func, const ArgStore& args) {
-        return func.invoke(*this, args);
-    }
-
     Errcode VM::invoke_native_func(const NativeFunction& func, const ArgStore& args) {
-        return func.invoke(*this, args);
+        return func.ptr()(this, args);
     }
 
     void VM::add_native_function(int native_id, const NativeFunction& func) noexcept {
@@ -159,17 +167,18 @@ namespace XLang::VM {
     }
 
     Opcode VM::decode_opcode() const noexcept {
-        const auto decoded_op = m_program_funcs.func_chunks.at(current_frame().caller_id).view_code().bytecode.at(m_iptr);
+        const auto decoded_op = m_program_funcs.func_chunks.at(current_frame().callee_id).view_code().bytecode.at(m_iptr);
 
         return static_cast<Opcode>(decoded_op);
     }
 
-    Codegen::Locator VM::decode_arg() const noexcept {
-        const auto& chunk_view = m_program_funcs.func_chunks.at(current_frame().caller_id).view_code().bytecode;
+    Codegen::Locator VM::decode_arg(int arg_num) const noexcept {
+        const auto& chunk_view = m_program_funcs.func_chunks.at(current_frame().callee_id).view_code().bytecode;
+        const auto arg_byte_pos = opcode_stride + (arg_num * opcode_arg_stride);
 
         return {
-            .region = static_cast<Codegen::Region>(chunk_view[m_iptr]),
-            .id = decode_i32(chunk_view, m_iptr + 1)
+            .region = static_cast<Codegen::Region>(chunk_view[m_iptr + arg_byte_pos]),
+            .id = decode_i32(chunk_view, m_iptr + arg_byte_pos + 1)
         };
     }
 
@@ -187,7 +196,7 @@ namespace XLang::VM {
             );
             break;
         case Codegen::Region::temp_stack:
-            m_values.push_back(*(m_values.end() - arg.id));
+            m_values.push_back(*(m_values.end() - (arg.id + 1)));
             break;
         case Codegen::Region::obj_heap:
             m_exit_status = Errcode::xerr_temp_stack;
@@ -219,7 +228,7 @@ namespace XLang::VM {
 
     void VM::handle_load_const(const Codegen::Locator& arg) {
         m_values.push_back(
-            m_program_funcs.func_chunks.at(m_frames.back().callee_id).view_code().constants.at(arg.id)
+            m_program_funcs.func_chunks.at(current_frame().callee_id).view_code().constants.at(arg.id)
         );
     }
 
@@ -293,11 +302,11 @@ namespace XLang::VM {
         }
     }
 
-    void VM::handle_jump_if(const Codegen::Locator& arg) {
+    void VM::handle_jump_not_if(const Codegen::Locator& arg) {
         Value check_val = m_values.back();
         m_values.pop_back();
 
-        if (std::get<bool>(check_val.inner_box())) {
+        if (!std::get<bool>(check_val.inner_box())) {
             m_iptr = arg.id;
         } else {
             m_iptr += 6; // advance past jump_if with encoded stride of 6 bytes
@@ -305,7 +314,6 @@ namespace XLang::VM {
     }
 
     void VM::handle_return(const Codegen::Locator& arg) {
-        // todo: yield top value as result if arg.region -> none OR yield value from another runtime region with arg.id position
         const auto [arg_tag, arg_num] = arg;
         Value result = ([&arg, this](Codegen::Region tag, int num) {
             switch (tag) {
@@ -318,6 +326,7 @@ namespace XLang::VM {
             case Codegen::Region::frame_slot:
                 return current_frame().args.at(num);
             case Codegen::Region::none:
+                return m_values.back();
             default:
                 m_exit_status = Errcode::xerr_temp_stack;
                 throw std::runtime_error {"Invalid argument tag for opcode RET: none, etc."};
@@ -331,32 +340,57 @@ namespace XLang::VM {
         m_values.pop_back();
 
         m_values.emplace_back(std::move(result));
+
         m_frames.pop_back();
+
+        if (!is_done()) {
+            m_iptr = current_frame().callee_pos;
+        } else {
+            m_iptr = 0;
+        }
     }
 
     void VM::handle_call(const Codegen::Locator& local_func_id, int argc) {
-        // todo: see vm.md... prepare call frame and then set IP accordingly
-        const auto ret_func_id = current_frame().callee_id;
-        const auto ret_func_pos = m_iptr + 11;
+        /// NOTE: store return address in caller before entering callee...
+        const auto ret_func_pos = m_iptr + opcode_stride + (2 * opcode_arg_stride);
+        m_frames.back().callee_pos = ret_func_pos;
+
         ArgStore args;
 
-        for (auto arg_count = 0; arg_count < argc; ++argc) {
+        for (auto arg_count = 0; arg_count < argc; ++arg_count) {
             auto temp_arg = m_values.back();
             args.emplace_back(std::move(temp_arg));
             m_values.pop_back();
         }
 
+        /// NOTE: prepare base value & call state of function frame...
+        m_values.emplace_back(Value {Codegen::Locator {
+            .region = Codegen::Region::routines,
+            .id = local_func_id.id
+        }});
+
         m_frames.emplace_back(CallFrame {
             .args = std::move(args),
             .callee_id = local_func_id.id,
-            .caller_id = ret_func_id,
-            .caller_pos = ret_func_pos
+            .callee_pos = 0
         });
+
+        /// NOTE: resume execution at the beginning of the callee's chunk
+        m_iptr = 0;
     }
 
     void VM::handle_native_call([[maybe_unused]] int module_id, [[maybe_unused]] int native_id, [[maybe_unused]] int argc) {
-        // todo: see vm.md... does not prepare a call frame since natives have no bytecode chunk to access.
-        m_exit_status = Errcode::xerr_general;
-        throw std::runtime_error {"Unimplemented operation: VM::handle_native_call()"};
+        ArgStore args;
+
+        for (auto arg_count = 0; arg_count < argc; ++arg_count) {
+            auto temp_arg = m_values.back();
+            args.emplace_back(std::move(temp_arg));
+            m_values.pop_back();
+        }
+
+        m_exit_status = m_native_funcs.at(native_id).invoke(*this, args);
+
+        /// NOTE: resume execution after native_call instruction (16B encoded)
+        m_iptr += opcode_stride + (3 * opcode_arg_stride);
     }
 }
