@@ -191,12 +191,12 @@ namespace XLang::VM {
         case Codegen::Region::consts:
             m_values.push_back(
                 m_program_funcs.func_chunks.at(
-                    m_frames.back().callee_id
+                    current_frame().callee_id
                 ).view_code().constants.at(arg.id)
             );
             break;
         case Codegen::Region::temp_stack:
-            m_values.push_back(*(m_values.end() - (arg.id + 1)));
+            m_values.push_back(m_values[current_frame().callee_frame_base + arg.id]);
             break;
         case Codegen::Region::obj_heap:
             m_exit_status = Errcode::xerr_temp_stack;
@@ -206,7 +206,7 @@ namespace XLang::VM {
             m_values.push_back(Value {arg});
             break;
         case Codegen::Region::frame_slot:
-            m_values.push_back(m_frames.back().args.at(arg.id));
+            m_values.push_back(current_frame().args.at(arg.id));
             break;
         case Codegen::Region::none:
         default:
@@ -228,7 +228,9 @@ namespace XLang::VM {
 
     void VM::handle_load_const(const Codegen::Locator& arg) {
         m_values.push_back(
-            m_program_funcs.func_chunks.at(current_frame().callee_id).view_code().constants.at(arg.id)
+            m_program_funcs.func_chunks.at(
+                current_frame().callee_id
+            ).view_code().constants.at(arg.id)
         );
     }
 
