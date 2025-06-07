@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <array>
 #include <any>
 #include <unordered_map>
 #include <variant>
@@ -53,9 +54,44 @@ namespace XLang::Codegen {
      */
     class GraphPass : public Syntax::ExprVisitor<std::any>, public Syntax::StmtVisitor<std::any> {
     private:
+        /// @note indicates deltas of stack change by opcode... -100 means the opcode clears the callee's stack frame, thus needing a reset of the simulated stack frame score.
+        static constexpr std::array<int, static_cast<std::size_t>(VM::Opcode::last)> m_op_stack_deltas = {
+            -100,
+            0,
+            1,
+            -1,
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            0,
+            -1,
+            -1,
+            -100,
+            1,
+            1
+        };
+
         enum class OpLeaning {
             lean_left,
             lean_right,
+        };
+
+        struct NamedLocator {
+            std::string_view name;
+            Locator locator;
         };
 
         HeapAllocator m_heap_all;
@@ -78,11 +114,13 @@ namespace XLang::Codegen {
 
         std::string_view m_old_src;
 
+        /// @note simulates size of a callee's stack values frame
+        int m_stack_score;
+
         int m_main_func_idx;
 
         /// @note const_id resets after each function decl processed... const_id = m_const_map.size()
         [[nodiscard]] int next_const_id() noexcept;
-        [[nodiscard]] int next_local_id() noexcept;
         [[nodiscard]] int next_func_id() noexcept;
         [[nodiscard]] int next_param_id() noexcept;
         // [[nodiscard]] int curr_const_id() noexcept;
@@ -97,6 +135,7 @@ namespace XLang::Codegen {
 
         void commit_current_consts();
 
+        void update_stack_score_delta(const StepUnion& step);
         void leave_record();
         void place_step(StepUnion step);
         void place_node(NodeUnion node_box);
