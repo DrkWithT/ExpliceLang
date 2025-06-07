@@ -7,9 +7,9 @@ func fib(n: int,): int {
 }
 
 func main(): int {
-    const ans: int = fib(24,);
+    const ans: int = fib(29,);
 
-    if (ans != 75025) {
+    if (ans != 832040) {
         return 1;
     }
 

@@ -12,7 +12,7 @@
 <compare> = <equality> (("<" / ">") <equality>)*
 <and> = <compare> ("&&" <compare>)*
 <or> = <and> ("||" <and>)*
-<assign> = <or> ("=" <or>)?
+<assign> = <access> ("=" <or>)?
 <expr> = <assign>
 ```
 
