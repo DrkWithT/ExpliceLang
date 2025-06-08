@@ -1,4 +1,5 @@
 #include <utility>
+#include <typeinfo>
 #include "syntax/exprs.hpp"
 
 namespace XLang::Syntax {
@@ -15,6 +16,10 @@ namespace XLang::Syntax {
 
     std::any Literal::type_tagging() const {
         return type;
+    }
+
+    ExprArity Literal::arity() const noexcept {
+        return ExprArity::one;
     }
 
     std::any Literal::accept_visitor(ExprVisitor<std::any>& visitor) const {
@@ -35,6 +40,10 @@ namespace XLang::Syntax {
 
     std::any Unary::type_tagging() const {
         return inner->type_tagging();
+    }
+
+    ExprArity Unary::arity() const noexcept {
+        return ExprArity::one;
     }
 
     std::any Unary::accept_visitor(ExprVisitor<std::any>& visitor) const  {
@@ -77,6 +86,10 @@ namespace XLang::Syntax {
         return Semantics::TypeTag::x_type_unknown;
     }
 
+    ExprArity Binary::arity() const noexcept {
+        return ExprArity::two;
+    }
+
     std::any Binary::accept_visitor(ExprVisitor<std::any>& visitor) const {
         return visitor.visit_binary(*this);
     }
@@ -97,7 +110,12 @@ namespace XLang::Syntax {
         return Semantics::TypeTag::x_type_unknown;
     }
 
+    ExprArity Call::arity() const noexcept {
+        return ExprArity::variadic;
+    }
+
     std::any Call::accept_visitor(ExprVisitor<std::any>& visitor) const {
         return visitor.visit_call(*this);
     }
+
 }

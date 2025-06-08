@@ -11,6 +11,8 @@ namespace XLang::VM {
         ArgStore args;
         int callee_id;
         int callee_pos;
+        /// @todo use this field based on README plans.
+        int callee_frame_base;
     };
 
     class VM {
@@ -53,7 +55,6 @@ namespace XLang::VM {
         };
 
         [[nodiscard]] const CallFrame& current_frame() const noexcept;
-
         [[nodiscard]] bool is_done() const noexcept;
 
         [[nodiscard]] Opcode decode_opcode() const noexcept;

@@ -1,4 +1,5 @@
 #include <array>
+#include <iostream>
 #include <stdexcept>
 #include "vm/values.hpp"
 
@@ -76,6 +77,7 @@ namespace XLang::VM {
 
     Value Value::subtract(const Value& rhs) const {
         if (!is_numeric() || !rhs.is_numeric()) {
+            std::cout << "lhs-tag: " << m_data.index() << ", rhs-tag: " << rhs.m_data.index() << '\n'; // debug
             throw std::runtime_error {"Invalid add operands: NaN detected."};
         }
 

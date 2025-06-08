@@ -10,7 +10,7 @@ set(XLANG_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build)
 if (DEBUG_MODE)
     add_compile_options(-Wall -Wextra -Wpedantic -Werror -g -Og)
 else ()
-    add_compile_options(-Wall -Wextra -Wpedantic -Werror -O3)
+    add_compile_options(-Wall -Wextra -Wpedantic -Werror -O2)
 endif ()
 
 add_subdirectory(${XLANG_SRC_DIR})

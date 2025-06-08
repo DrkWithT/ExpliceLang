@@ -244,7 +244,7 @@ namespace XLang::Frontend {
     }
 
     Syntax::ExprPtr Parser::parse_assign() {
-        auto assign_root = parse_or();
+        auto assign_root = parse_access();
 
         if (match_at(0, LexTag::symbol_assign)) {
             consume();

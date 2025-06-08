@@ -1,4 +1,5 @@
 #include <utility>
+#include "syntax/exprs.hpp"
 #include "codegen/graph_pass.hpp"
 #include "codegen/steps.hpp"
 #include "frontend/token.hpp"
@@ -84,10 +85,6 @@ namespace XLang::Codegen {
         return m_const_map.size();
     }
 
-    int GraphPass::next_local_id() noexcept {
-        return m_current_name_map.size();
-    }
-
     int GraphPass::next_func_id() noexcept {
         return m_global_func_map.size();
     }
@@ -138,10 +135,37 @@ namespace XLang::Codegen {
         m_func_consts.emplace_back(m_const_map);
     }
 
+    void GraphPass::update_stack_score_delta(const StepUnion& step) {
+        const auto step_op = ([](const StepUnion& step) {
+            const auto step_box_tag = step.index();
+
+            if (step_box_tag == 0) {
+                return std::get<NonaryStep>(step).op;
+            } else if (step_box_tag == 1) {
+                return std::get<UnaryStep>(step).op;
+            } else if (step_box_tag == 2) {
+                return std::get<BinaryStep>(step).op;
+            } else if (step_box_tag == 3) {
+                return std::get<TernaryStep>(step).op;
+            }
+
+            return VM::Opcode::xop_noop;
+        })(step);
+
+        const auto opcode_id = static_cast<unsigned int>(step_op);
+
+        if (const auto delta = m_op_stack_deltas[opcode_id]; delta != -100) {
+            m_stack_score += delta;
+        } else {
+            m_stack_score = 0;
+        }
+    }
+
     void GraphPass::leave_record() {
         m_const_map.clear();
         m_current_name_map.clear();
         m_current_params_map.clear();
+        m_stack_score = 0;
     }
 
     void GraphPass::place_step(StepUnion step) {
@@ -149,10 +173,12 @@ namespace XLang::Codegen {
             return;
         }
 
-        auto& todo_it = m_nodes.back();
+        update_stack_score_delta(step);
 
-        if (todo_it.index() == 0) {
-            std::get<Unit>(todo_it).steps.emplace_back(std::move(step));
+        auto& working_node = m_nodes.back();
+
+        if (working_node.index() == 0) {
+            std::get<Unit>(working_node).steps.emplace_back(std::move(step));
         }
     }
 
@@ -298,15 +324,51 @@ namespace XLang::Codegen {
     }
 
     std::any GraphPass::help_gen_assign(const Syntax::Binary& expr) {
-        /// @note Assignment to a variable resolves to the init-expr's result anyways I think.
+        /// @note Assignment to a variable resolves to the init-expr's result anyways... Also check the left (which is guaranteed to be a name by the grammar and semantic checks that will only allow assignments to names).
+        /// @note LHS may be a Literal or Access expr.
+        std::string_view lhs_name = ([&](const Syntax::Expr* expr) {
+            const auto expr_arity_hint = expr->arity();
+            Frontend::Token name_token = {
+                .tag = Frontend::LexTag::eof,
+                -1,
+                0,
+                -1,
+                -1
+            };
+
+            if (expr_arity_hint == Syntax::ExprArity::one) {
+                /// 1. LHS name literal case
+                name_token = dynamic_cast<const Syntax::Literal*>(expr)->token;
+            } else if (expr_arity_hint == Syntax::ExprArity::two) {
+                // 2. LHS Access case (Yes, it's cursed, but see the notes above.)
+                name_token = dynamic_cast<const Syntax::Literal*>(
+                    dynamic_cast<const Syntax::Binary*>(expr)->left.get()
+                )->token;
+            }
+
+            if (name_token.tag == Frontend::LexTag::eof) {
+                throw std::logic_error {"Could not deduce LHS name in an assignment expr."};
+            }
+
+            return Frontend::peek_lexeme(name_token, m_old_src);
+        })(expr.left.get());
+
         auto initializer_locator = expr.right->accept_visitor(*this);
 
-        return initializer_locator;
+        m_current_name_map[lhs_name] = Locator {
+            .region = Region::temp_stack,
+            .id = m_stack_score
+        };
+
+        return Locator {
+            .region = Region::temp_stack,
+            .id = m_stack_score
+        };
     }
 
 
     GraphPass::GraphPass(std::string_view old_source)
-    : m_heap_all {}, m_current_name_map {}, m_current_params_map {}, m_global_func_map {}, m_const_map {}, m_func_consts {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source}, m_main_func_idx {dud_offset} {}
+    : m_heap_all {}, m_current_name_map {}, m_current_params_map {}, m_global_func_map {}, m_const_map {}, m_func_consts {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source}, m_stack_score {0}, m_main_func_idx {dud_offset} {}
 
     std::any GraphPass::visit_literal(const Syntax::Literal& expr) {
         auto record_const_primitive = [this](Semantics::TypeTag tag, const Frontend::Token& primitive_token) {
@@ -443,8 +505,8 @@ namespace XLang::Codegen {
         const auto func_locator = lookup_callable_name(expr.func_name);
         auto args_n = static_cast<int>(expr.args.size());
 
-        for (const auto& arg_expr : expr.args) {
-            arg_expr->accept_visitor(*this);
+        for (auto arg_iter = args_n - 1; arg_iter >= 0; --arg_iter) {
+            expr.args[arg_iter]->accept_visitor(*this);
         }
 
         place_step(BinaryStep {
@@ -474,7 +536,7 @@ namespace XLang::Codegen {
         } else {
             var_init_locator = Locator {
                 .region = Region::temp_stack,
-                .id = next_local_id()
+                .id = m_stack_score,
             };
         }
 
@@ -523,10 +585,6 @@ namespace XLang::Codegen {
 
     std::any GraphPass::visit_expr_stmt(const Syntax::ExprStmt& stmt) {
         auto inner_result = stmt.inner->accept_visitor(*this);
-
-        // place_step(NonaryStep {
-        //     .op = VM::Opcode::xop_pop
-        // });
 
         return {}; // TODO
     }
