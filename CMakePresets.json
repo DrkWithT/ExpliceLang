@@ -13,7 +13,7 @@
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "CMAKE_CXX_STANDARD": "23",
                 "CMAKE_CXX_EXTENSIONS": "OFF",
-                "DEBUG_MODE": "ON"
+                "MY_FLAGS": "-Wall;-Wextra;-Wpedantic;-Werror;-g;-Og"
             }
         },
         {
@@ -24,7 +24,7 @@
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "CMAKE_CXX_STANDARD": "23",
                 "CMAKE_CXX_EXTENSIONS": "OFF",
-                "DEBUG_MODE": "OFF"
+                "MY_FLAGS": "-Wall;-Wextra;-Wpedantic;-Werror;-O3;-ffast-math"
             }
         }
     ]
