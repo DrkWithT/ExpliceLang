@@ -1,4 +1,5 @@
 #include <utility>
+#include "syntax/exprs.hpp"
 #include "codegen/graph_pass.hpp"
 #include "codegen/steps.hpp"
 #include "frontend/token.hpp"
@@ -442,10 +443,7 @@ namespace XLang::Codegen {
                 .arg_0 = name_loc
             });
 
-            return NamedLocator {
-                .name = literal_lexeme,
-                .locator = name_loc
-            };
+            return name_loc;
         }
 
         throw std::logic_error {"String codegen unsupported!\n"};
@@ -507,8 +505,8 @@ namespace XLang::Codegen {
         const auto func_locator = lookup_callable_name(expr.func_name);
         auto args_n = static_cast<int>(expr.args.size());
 
-        for (const auto& arg_expr : expr.args) {
-            arg_expr->accept_visitor(*this);
+        for (auto arg_iter = args_n - 1; arg_iter >= 0; --arg_iter) {
+            expr.args[arg_iter]->accept_visitor(*this);
         }
 
         place_step(BinaryStep {

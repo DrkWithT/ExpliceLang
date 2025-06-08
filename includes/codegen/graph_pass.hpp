@@ -89,11 +89,6 @@ namespace XLang::Codegen {
             lean_right,
         };
 
-        struct NamedLocator {
-            std::string_view name;
-            Locator locator;
-        };
-
         HeapAllocator m_heap_all;
         NameLocatorRecord m_current_name_map;
         NameLocatorRecord m_current_params_map;

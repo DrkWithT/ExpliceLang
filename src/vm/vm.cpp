@@ -1,3 +1,4 @@
+// #include <iostream>
 #include <stdexcept>
 #include <utility>
 #include "vm/vm.hpp"
@@ -29,7 +30,8 @@ namespace XLang::VM {
         m_frames.emplace_back(
             ArgStore {},
             m_program_funcs.entry_func_id,
-            m_iptr
+            m_iptr,
+            0
         );
     }
 
@@ -167,6 +169,7 @@ namespace XLang::VM {
     }
 
     Opcode VM::decode_opcode() const noexcept {
+        // std::cout << "CHUNK: " << current_frame().callee_id <<  ", IPTR: " << m_iptr << '\n';
         const auto decoded_op = m_program_funcs.func_chunks.at(current_frame().callee_id).view_code().bytecode.at(m_iptr);
 
         return static_cast<Opcode>(decoded_op);
@@ -320,8 +323,11 @@ namespace XLang::VM {
         Value result = ([&arg, this](Codegen::Region tag, int num) {
             switch (tag) {
             case Codegen::Region::consts:
-                return m_program_funcs.func_chunks.at(current_frame().callee_id).view_code().constants.at(num);
+                return m_program_funcs.func_chunks.at(
+                    current_frame().callee_id
+                ).view_code().constants.at(num);
             case Codegen::Region::temp_stack:
+                return m_values.at(current_frame().callee_frame_base + num);
             case Codegen::Region::obj_heap:
             case Codegen::Region::routines:
                 return Value {arg};
@@ -374,7 +380,8 @@ namespace XLang::VM {
         m_frames.emplace_back(CallFrame {
             .args = std::move(args),
             .callee_id = local_func_id.id,
-            .callee_pos = 0
+            .callee_pos = 0,
+            .callee_frame_base = static_cast<int>(m_values.size())
         });
 
         /// NOTE: resume execution at the beginning of the callee's chunk

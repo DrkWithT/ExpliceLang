@@ -17,7 +17,7 @@ namespace XLang::Syntax {
         virtual bool yields_value() const noexcept = 0;
         virtual Semantics::ValuingTag value_group() const noexcept = 0;
         virtual std::any type_tagging() const = 0;
-        virtual ExprArity arity() const noexcept;
+        virtual ExprArity arity() const noexcept = 0;
         virtual std::any accept_visitor(ExprVisitor<std::any>& visitor) const = 0;
     };
 }

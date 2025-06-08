@@ -1,4 +1,5 @@
 #include <utility>
+#include <typeinfo>
 #include "syntax/exprs.hpp"
 
 namespace XLang::Syntax {
