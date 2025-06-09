@@ -20,13 +20,14 @@ Xplice is my first ever stack-bytecode-based language. The goal of this language
  - [VM](./docs/vm.md)
 
 ### Roadmap:
- - Fix bug where local variables passed to calls evaluate in a wrong order.
-   - Redo codegen to track state "push/pop scoring" so that local slots are precisely tracked in compilation... Fix VM as needed!
  - Add semantic analysis for:
    - Name-defined checks
    - Simple type checks for expressions
  - Add native function support!
  - Add while loop support.
+ - Add optimization passes for:
+   - Dead branches in control flow.
+   - Peephole optimizing by replacing "useless" instructions.
  - Add support for imports of native functions!
  - Add array and tuple parsing support.
  - Add array and tuple codegen support.

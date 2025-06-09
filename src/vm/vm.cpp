@@ -381,7 +381,7 @@ namespace XLang::VM {
             .args = std::move(args),
             .callee_id = local_func_id.id,
             .callee_pos = 0,
-            .callee_frame_base = static_cast<int>(m_values.size())
+            .callee_frame_base = static_cast<int>(m_values.size()) - 1
         });
 
         /// NOTE: resume execution at the beginning of the callee's chunk

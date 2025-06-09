@@ -7,10 +7,10 @@ set(XLANG_INC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/includes)
 set(XLANG_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(XLANG_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build)
 
-if (DEBUG_MODE)
-    add_compile_options(-Wall -Wextra -Wpedantic -Werror -g -Og)
+if (DEFINED MY_FLAGS)
+    add_compile_options(${MY_FLAGS})
 else ()
-    add_compile_options(-Wall -Wextra -Wpedantic -Werror -O2)
+    message (FATAL_ERROR "Preset invalid because it is missing the MY_FLAGS variable.")
 endif ()
 
 add_subdirectory(${XLANG_SRC_DIR})
