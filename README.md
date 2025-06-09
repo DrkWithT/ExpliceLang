@@ -3,12 +3,6 @@
 ### Summary
 Xplice is my first ever stack-bytecode-based language. The goal of this language is to become a familiar-looking, simple, and procedural utility language. See the below points for its design philosophy.
 
-### General:
- - Familiar-ish syntax to TS and C++.
- - Static, strong type system.
- - Module-based? (TODO)
- - Native function support? (TODO)
-
 ### Philosophy:
  - Explicit behavior is better for understanding.
  - Concise and clear code helps maintainability.
