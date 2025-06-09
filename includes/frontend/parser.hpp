@@ -65,7 +65,7 @@ namespace XLang::Frontend {
         [[nodiscard]] Syntax::StmtPtr parse_import();
         [[nodiscard]] Syntax::StmtPtr parse_function_decl();
         [[nodiscard]] std::vector<Syntax::ArgDecl> parse_arg_list();
-        [[nodiscard]] std::any parse_type_specifier();
+        [[nodiscard]] Semantics::TypeInfo parse_type_specifier();
         [[nodiscard]] Syntax::StmtPtr parse_block();
         [[nodiscard]] Syntax::StmtPtr parse_nestable_stmt();
         [[nodiscard]] Syntax::StmtPtr parse_variable_decl();

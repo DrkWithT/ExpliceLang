@@ -21,7 +21,7 @@ namespace XLang::Syntax {
 
         bool yields_value() const noexcept override;
         Semantics::ValuingTag value_group() const noexcept override;
-        std::any type_tagging() const override;
+        Semantics::TypeInfo type_tagging() const override;
         ExprArity arity() const noexcept override;
         std::any accept_visitor(ExprVisitor<std::any>& visitor) const override;
     };
@@ -34,7 +34,7 @@ namespace XLang::Syntax {
 
         bool yields_value() const noexcept override;
         Semantics::ValuingTag value_group() const noexcept override;
-        std::any type_tagging() const override;
+        Semantics::TypeInfo type_tagging() const override;
         ExprArity arity() const noexcept override;
         std::any accept_visitor(ExprVisitor<std::any>& visitor) const override;
     };
@@ -48,7 +48,7 @@ namespace XLang::Syntax {
 
         bool yields_value() const noexcept override;
         Semantics::ValuingTag value_group() const noexcept override;
-        std::any type_tagging() const override;
+        Semantics::TypeInfo type_tagging() const override;
         ExprArity arity() const noexcept override;
         std::any accept_visitor(ExprVisitor<std::any>& visitor) const override;
     };
@@ -61,7 +61,7 @@ namespace XLang::Syntax {
 
         bool yields_value() const noexcept override;
         Semantics::ValuingTag value_group() const noexcept override;
-        std::any type_tagging() const override;
+        Semantics::TypeInfo type_tagging() const override;
         ExprArity arity() const noexcept override;
         std::any accept_visitor(ExprVisitor<std::any>& visitor) const override;
     };

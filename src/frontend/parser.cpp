@@ -323,11 +323,11 @@ namespace XLang::Frontend {
         // std::cout << "parse_function_decl(...) --> consume() call 3\n";
         consume(LexTag::colon);
 
-        std::any func_return_type = parse_type_specifier();
+        auto func_return_type = parse_type_specifier();
 
         auto func_body = parse_block();
 
-        return std::make_unique<Syntax::FunctionDecl>(func_return_type, argument_decls, func_name, std::move(func_body));
+        return std::make_unique<Syntax::FunctionDecl>(std::move(func_return_type), argument_decls, func_name, std::move(func_body));
     }
 
     std::vector<Syntax::ArgDecl> Parser::parse_arg_list() {
@@ -356,7 +356,7 @@ namespace XLang::Frontend {
         return argument_decls;
     }
 
-    std::any Parser::parse_type_specifier() {
+    Semantics::TypeInfo Parser::parse_type_specifier() {
         // std::cout << "parse_type_specifier(...)\n";
         if (!match_at(0, LexTag::type_specifier)) {
             m_errors.emplace_back("Invalid token for type specifier.", peek_at(0));
@@ -367,16 +367,28 @@ namespace XLang::Frontend {
 
         if (peeked_type_specifier == "bool") {
             consume();
-            return Semantics::TypeTag::x_type_bool;
+            return Semantics::PrimitiveType {
+                .item_tag = Semantics::TypeTag::x_type_bool,
+                .readonly = true
+            };
         } else if (peeked_type_specifier == "int") {
             consume();
-            return Semantics::TypeTag::x_type_int;
+            return Semantics::PrimitiveType {
+                .item_tag = Semantics::TypeTag::x_type_int,
+                .readonly = true
+            };
         } else if (peeked_type_specifier == "float") {
             consume();
-            return Semantics::TypeTag::x_type_float;
+            return Semantics::PrimitiveType {
+                .item_tag = Semantics::TypeTag::x_type_float,
+                .readonly = true
+            };
         } else if (peeked_type_specifier == "string") {
             consume();
-            return Semantics::TypeTag::x_type_string;
+            return Semantics::PrimitiveType {
+                .item_tag = Semantics::TypeTag::x_type_string,
+                .readonly = true
+            };
         }
 
         m_errors.emplace_back("Unrecognized type name- may not be implemented in the compiler.", peek_at(0));
@@ -426,13 +438,13 @@ namespace XLang::Frontend {
         consume(LexTag::identifier);
         consume(LexTag::colon);
 
-        std::any var_typing = parse_type_specifier();
+        auto var_typing = parse_type_specifier();
         consume(LexTag::symbol_assign);
 
         auto var_initializer = parse_or();
         consume(LexTag::semicolon);
 
-        return std::make_unique<Syntax::VariableDecl>(var_typing, var_name, std::move(var_initializer), var_is_readonly);
+        return std::make_unique<Syntax::VariableDecl>(std::move(var_typing), var_name, std::move(var_initializer), var_is_readonly);
     }
 
     Syntax::StmtPtr Parser::parse_expr_stmt() {

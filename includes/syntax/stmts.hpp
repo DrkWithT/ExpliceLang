@@ -18,44 +18,44 @@ namespace XLang::Syntax {
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;
-        std::any possible_result_type() const noexcept override;
+        Semantics::TypeInfo possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
         std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };
 
     struct VariableDecl : public Stmt {
-        std::any typing;
+        Semantics::TypeInfo typing;
         Frontend::Token name;
         ExprPtr init_expr;
         bool readonly;
 
-        explicit VariableDecl(std::any typing_, const Frontend::Token& var_name_, ExprPtr init_expr_, bool readonly_) noexcept;
+        explicit VariableDecl(Semantics::TypeInfo typing_, const Frontend::Token& var_name_, ExprPtr init_expr_, bool readonly_) noexcept;
 
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;
-        std::any possible_result_type() const noexcept override;
+        Semantics::TypeInfo possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
         std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };
 
     struct ArgDecl {
-        std::any type;
+        Semantics::TypeInfo type;
         Frontend::Token name;
     };
 
     struct FunctionDecl : public Stmt {
-        std::any typing;
+        Semantics::TypeInfo typing;
         std::vector<ArgDecl> args;
         Frontend::Token name;
         StmtPtr body;
 
-        FunctionDecl(std::any typing_, const std::vector<ArgDecl>& args_, const Frontend::Token& name_, StmtPtr body_) noexcept;
+        FunctionDecl(Semantics::TypeInfo typing_, const std::vector<ArgDecl>& args_, const Frontend::Token& name_, StmtPtr body_) noexcept;
 
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;
-        std::any possible_result_type() const noexcept override;
+        Semantics::TypeInfo possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
         std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };
@@ -68,7 +68,7 @@ namespace XLang::Syntax {
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;
-        std::any possible_result_type() const noexcept override;
+        Semantics::TypeInfo possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
         std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };
@@ -81,7 +81,7 @@ namespace XLang::Syntax {
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;
-        std::any possible_result_type() const noexcept override;
+        Semantics::TypeInfo possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
         std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };
@@ -94,7 +94,7 @@ namespace XLang::Syntax {
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;
-        std::any possible_result_type() const noexcept override;
+        Semantics::TypeInfo possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
         std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };
@@ -109,7 +109,7 @@ namespace XLang::Syntax {
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;
-        std::any possible_result_type() const noexcept override;
+        Semantics::TypeInfo possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
         std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };

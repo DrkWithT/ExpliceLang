@@ -1,6 +1,6 @@
 #pragma once
 
-#include <any>
+#include <variant>
 #include <vector>
 #include <string>
 #include <string_view>
@@ -20,7 +20,8 @@ namespace XLang::Semantics {
         cmp_lt,
         cmp_gt,
         logic_and,
-        logic_or
+        logic_or,
+        last
     };
 
     enum class ValuingTag : unsigned char {
@@ -34,10 +35,16 @@ namespace XLang::Semantics {
         x_type_int,
         x_type_float,
         x_type_string,
-        x_type_unknown
+        x_type_unknown,
+        last
     };
 
     struct NullType {};
+
+    struct PrimitiveType {
+        TypeTag item_tag;
+        bool readonly;
+    };
 
     struct ArrayType {
         TypeTag item_tag;
@@ -49,9 +56,11 @@ namespace XLang::Semantics {
     };
 
     struct CallableType {
-        std::vector<std::any> item_tags;
+        std::vector<std::variant<NullType, PrimitiveType, ArrayType, TupleType>> item_tags;
         TypeTag result_tag;
     };
+
+    using TypeInfo = std::variant<NullType, PrimitiveType, ArrayType, TupleType, CallableType>;
 
     [[nodiscard]] std::string_view create_type_name(TypeTag single_tag);
 

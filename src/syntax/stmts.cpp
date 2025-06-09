@@ -17,7 +17,7 @@ namespace XLang::Syntax {
         return false;
     }
 
-    std::any Import::possible_result_type() const noexcept {
+    Semantics::TypeInfo Import::possible_result_type() const noexcept {
         return {};
     }
 
@@ -30,8 +30,8 @@ namespace XLang::Syntax {
     }
 
 
-    VariableDecl::VariableDecl(std::any typing_, const Frontend::Token& name_, ExprPtr init_expr_, bool readonly_) noexcept
-    : typing {typing_}, name {name_}, init_expr {std::move(init_expr_)}, readonly {readonly_} {}
+    VariableDecl::VariableDecl(Semantics::TypeInfo typing_, const Frontend::Token& name_, ExprPtr init_expr_, bool readonly_) noexcept
+    : typing {std::move(typing_)}, name {name_}, init_expr {std::move(init_expr_)}, readonly {readonly_} {}
 
     bool VariableDecl::is_declarative() const noexcept {
         return true;
@@ -45,7 +45,7 @@ namespace XLang::Syntax {
         return false;
     }
 
-    std::any VariableDecl::possible_result_type() const noexcept {
+    Semantics::TypeInfo VariableDecl::possible_result_type() const noexcept {
         return typing;
     }
 
@@ -58,8 +58,8 @@ namespace XLang::Syntax {
     }
 
 
-    FunctionDecl::FunctionDecl(std::any typing_, const std::vector<ArgDecl>& args_, const Frontend::Token& name_, StmtPtr body_) noexcept
-    : typing {typing_}, args {args_}, name {name_}, body {std::move(body_)} {}
+    FunctionDecl::FunctionDecl(Semantics::TypeInfo typing_, const std::vector<ArgDecl>& args_, const Frontend::Token& name_, StmtPtr body_) noexcept
+    : typing {std::move(typing_)}, args {args_}, name {name_}, body {std::move(body_)} {}
 
     bool FunctionDecl::is_declarative() const noexcept {
         return true;
@@ -73,7 +73,7 @@ namespace XLang::Syntax {
         return false;
     }
 
-    std::any FunctionDecl::possible_result_type() const noexcept {
+    Semantics::TypeInfo FunctionDecl::possible_result_type() const noexcept {
         return typing;
     }
 
@@ -101,10 +101,10 @@ namespace XLang::Syntax {
         return true;
     }
 
-    std::any ExprStmt::possible_result_type() const noexcept {
+    Semantics::TypeInfo ExprStmt::possible_result_type() const noexcept {
         return (inner->yields_value())
         ? inner->type_tagging()
-        : Semantics::TypeTag::x_type_unknown;
+        : Semantics::NullType {};
     }
 
     void ExprStmt::accept_visitor(StmtVisitor<void>& visitor) const {
@@ -131,8 +131,8 @@ namespace XLang::Syntax {
         return false;
     }
 
-    std::any Block::possible_result_type() const noexcept {
-        return {};
+    Semantics::TypeInfo Block::possible_result_type() const noexcept {
+        return Semantics::NullType {};
     }
 
     void Block::accept_visitor(StmtVisitor<void>& visitor) const {
@@ -159,10 +159,10 @@ namespace XLang::Syntax {
         return false;
     }
 
-    std::any Return::possible_result_type() const noexcept {
+    Semantics::TypeInfo Return::possible_result_type() const noexcept {
         return (result_expr->yields_value())
             ? result_expr->type_tagging()
-            : Semantics::TypeTag::x_type_unknown;
+            : Semantics::NullType {};
     }
 
     void Return::accept_visitor(StmtVisitor<void>& visitor) const {
@@ -189,8 +189,8 @@ namespace XLang::Syntax {
         return false;
     }
 
-    std::any If::possible_result_type() const noexcept {
-        return {};
+    Semantics::TypeInfo If::possible_result_type() const noexcept {
+        return Semantics::NullType {};
     }
 
     void If::accept_visitor(StmtVisitor<void>& visitor) const {
