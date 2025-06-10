@@ -152,7 +152,11 @@ namespace XLang::Semantics {
         enter_scope(); // begin processing global scope
 
         for (const auto& decl : ast_decls) {
-            decl->accept_visitor(*this);
+            try {
+                decl->accept_visitor(*this);
+            } catch (const std::logic_error& error) {
+                ;
+            }
         }
 
         leave_scope(); // end processing of global scope
