@@ -12,22 +12,29 @@
 #include "semantics/tags.hpp"
 
 namespace XLang::Semantics {
+    [[nodiscard]] TypeTag unpack_underlying_type_tag(const TypeInfo& info);
+
+    [[nodiscard]] std::string_view op_tag_to_name(OpTag tag) noexcept;
+
+    [[nodiscard]] std::string type_info_to_str(const TypeInfo& typing);
+
+    [[nodiscard]] bool compare_type_info(const TypeInfo& lhs_type, const TypeInfo& rhs_type);
+
     struct SemanticEntry {
         TypeInfo type;
         ValuingTag value_group;
     };
 
-    enum class ErrorSubject : unsigned char {
-        undefined_name,
-        invalid_type,
-        invalid_operation_on_type,
-        general,
+    struct SemanticLocation {
+        std::string_view name;
+        int line;
     };
 
     struct SemanticDump {
         std::string message;
-        ErrorSubject subject;
-        int line;
+        Frontend::Token culprit;
+
+        friend std::string stringify_sema_dump(const SemanticDump& dump);
     };
 
     using Scope = std::unordered_map<std::string_view, SemanticEntry>;
@@ -36,7 +43,7 @@ namespace XLang::Semantics {
     /// @brief Checks for any undefined names and does simple type checking.
     class SemanticsPass : public Syntax::ExprVisitor<std::any>, public Syntax::StmtVisitor<std::any> {
     public:
-        SemanticsPass();
+        SemanticsPass(std::string_view source_);
 
         [[nodiscard]] SemanticDiagnoses operator()(const std::vector<Syntax::StmtPtr>& ast_decls);
 
@@ -64,15 +71,23 @@ namespace XLang::Semantics {
         };
 
         std::vector<Scope> m_scopes;
+        std::vector<SemanticLocation> m_locations;
+        SemanticDiagnoses m_result;
+        std::string_view m_source;
 
         void enter_scope();
         void leave_scope();
+        void enter_location(std::string_view name, int line);
+        void leave_location();
 
-        [[nodiscard]] TypeInfo resolve_name_existence(std::string_view name);
+        void record_name(std::string_view name, TypeInfo info);
+        [[nodiscard]] bool resolve_name_existence(std::string_view name);
+
+        /// @note If the name is undeclared, the TypeInfo contains a NullType.
         [[nodiscard]] TypeInfo resolve_type_from(std::string_view name);
-        [[nodiscard]] bool check_type_operation(const TypeInfo& arg_typing);
-        [[nodiscard]] bool check_type_operation(const TypeInfo& lhs_typing, const TypeInfo& rhs_typing);
+        [[nodiscard]] bool check_type_operation(OpTag op, const TypeInfo& arg_typing);
+        [[nodiscard]] bool check_type_operation(OpTag op, const TypeInfo& lhs_typing, const TypeInfo& rhs_typing);
 
-        void record_diagnosis(std::string message, ErrorSubject subject, int line);
+        void record_diagnosis(std::string message, Frontend::Token culprit);
     };
 }

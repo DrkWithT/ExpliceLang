@@ -1,5 +1,6 @@
 #pragma once
 
+#include <any>
 #include <variant>
 #include <vector>
 #include <string>
@@ -55,9 +56,11 @@ namespace XLang::Semantics {
         std::vector<TypeTag> item_tags;
     };
 
+    struct CallableType;
+
     struct CallableType {
-        std::vector<std::variant<NullType, PrimitiveType, ArrayType, TupleType>> item_tags;
-        TypeTag result_tag;
+        std::vector<std::variant<NullType, PrimitiveType, ArrayType, TupleType, CallableType>> item_tags;
+        std::any result_tag; // @note Use std::any here because CallableType is incomplete here.
     };
 
     using TypeInfo = std::variant<NullType, PrimitiveType, ArrayType, TupleType, CallableType>;
