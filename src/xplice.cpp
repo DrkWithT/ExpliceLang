@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
         std::print(std::cout, "usage: xplice [--help | --version | <source-path>]\n");
         return 0;
     } else if (process_arg_sv == "--version") {
-        std::print(std::cout, "Xplice (runtime) v0.0.1\nContributor Link: github.com/DrkWithT\n");
+        std::print(std::cout, "Xplice (runtime) v0.2.0\nContributor Link: github.com/DrkWithT\n");
         return 0;
     }
 
