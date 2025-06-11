@@ -31,6 +31,7 @@ namespace XLang::Semantics {
         "(unknown)"
     };
 
+    /// @todo Fix unexpected unknown type tag result when visit_return is done.
     TypeTag unpack_underlying_type_tag(const TypeInfo& info) {
         if (std::holds_alternative<PrimitiveType>(info)) {
             return std::get<PrimitiveType>(info).item_tag;
@@ -56,7 +57,7 @@ namespace XLang::Semantics {
         sout.str("");
 
         if (std::holds_alternative<NullType>(typing)) {
-            return "(null)";
+            sout << "(null)";
         } else if (std::holds_alternative<PrimitiveType>(typing)) {
             const auto& primitive_info = std::get<PrimitiveType>(typing);
 
@@ -83,7 +84,9 @@ namespace XLang::Semantics {
         } else if (std::holds_alternative<CallableType>(typing)) {
             const auto& callable_info = std::get<CallableType>(typing);
 
-            sout << type_info_to_str(typing) << '(';
+            sout << type_info_to_str(
+                std::any_cast<TypeInfo>(callable_info.result_tag)
+            ) << '(';
 
             for (const auto& item : callable_info.item_tags) {
                 sout << type_info_to_str(item) << ", ";
@@ -146,7 +149,7 @@ namespace XLang::Semantics {
     }
 
     SemanticsPass::SemanticsPass(std::string_view source_)
-    : m_scopes {}, m_locations {}, m_source {source_} {}
+    : m_scopes {}, m_location {}, m_source {source_} {}
 
     SemanticDiagnoses SemanticsPass::operator()(const std::vector<Syntax::StmtPtr>& ast_decls) {
         enter_scope(); // begin processing global scope
@@ -187,25 +190,29 @@ namespace XLang::Semantics {
                 .tag = Frontend::LexTag::unknown,
                 .start = -1,
                 .length = 0,
-                .line = m_locations.back().line,
+                .line = m_location.line,
                 .column = -1
             });
 
             throw std::logic_error {""};
         }
 
-        if (const auto real_info = std::any_cast<TypeInfo>(inner_info); !check_type_operation(expr_op, real_info)) {
+        const auto real_info = std::any_cast<TypeInfo>(inner_info);
+        const auto& [checked_info, check_ok] = check_type_operation(expr_op, real_info);
+
+        if (!check_ok) {
             record_diagnosis(
                 std::format(
-                    "Invalid operation on value of type {} in {} expression.",
+                    "Invalid operation on value of type {} in {} expression, results in {} value.",
                     type_info_to_str(real_info),
-                    op_tag_to_name(expr_op)
+                    op_tag_to_name(expr_op),
+                    type_info_to_str(checked_info)
                 ),
                 Frontend::Token {
                     .tag = Frontend::LexTag::unknown,
                     .start = -1,
                     .length = 0,
-                    .line = m_locations.back().line,
+                    .line = m_location.line,
                     .column = -1
                 }
             );
@@ -231,7 +238,7 @@ namespace XLang::Semantics {
                     .tag = Frontend::LexTag::unknown,
                     .start = -1,
                     .length = 0,
-                    .line = m_locations.back().line,
+                    .line = m_location.line,
                     .column = -1
                 }
             );
@@ -242,19 +249,22 @@ namespace XLang::Semantics {
         auto lhs_info = std::any_cast<TypeInfo>(lhs_box);
         auto rhs_info = std::any_cast<TypeInfo>(rhs_box);
 
-        if (!check_type_operation(expr_op, lhs_info, rhs_info)) {
+        const auto [checked_info, check_ok] = check_type_operation(expr_op, lhs_info, rhs_info);
+
+        if (!check_ok) {
             record_diagnosis(
                 std::format(
-                    "Invalid types {} and {} for {} expression.",
+                    "Invalid types {} and {} for {} expression, results in {} value.",
                     type_info_to_str(lhs_info),
                     type_info_to_str(rhs_info),
-                    op_tag_to_name(expr_op)
+                    op_tag_to_name(expr_op),
+                    type_info_to_str(checked_info)
                 ),
                 Frontend::Token {
                     .tag = Frontend::LexTag::unknown,
                     .start = -1,
                     .length = 0,
-                    .line = m_locations.back().line,
+                    .line = m_location.line,
                     .column = -1
                 }
             );
@@ -262,23 +272,38 @@ namespace XLang::Semantics {
             throw std::logic_error {""};
         }
 
-        return {}; // todo
+        /// 1. Handle access expr. case...
+        if (const auto lhs_type_num = lhs_info.index(); lhs_type_num >= 2) {
+            return checked_info;
+        } else if (expr_op >= OpTag::cmp_equ && expr_op <= OpTag::logic_or) {
+            // 2. Handle logical exprs.
+            return TypeInfo {
+                PrimitiveType {
+                    .item_tag = TypeTag::x_type_bool,
+                    .readonly = true
+                }
+            };
+        }
+
+        /// 2. Handle plain-old arithmetic with primitives...
+        return lhs_info;
     }
 
     std::any SemanticsPass::visit_call(const Syntax::Call& expr) {
-        const auto& callee_box = resolve_type_from(expr.func_name);
+        const auto& callee_name = expr.func_name;
+        const auto& callee_box = resolve_type_from(callee_name);
 
         if (std::holds_alternative<NullType>(callee_box)) {
             record_diagnosis(
                 std::format(
                     "Undeclared name '{}' in a call expression.",
-                    expr.func_name
+                    callee_name
                 ),
                 Frontend::Token {
                     .tag = Frontend::LexTag::unknown,
                     .start = -1,
                     .length = 0,
-                    .line = m_locations.back().line,
+                    .line = m_location.line,
                     .column = -1
                 }
             );
@@ -296,7 +321,7 @@ namespace XLang::Semantics {
                     .tag = Frontend::LexTag::unknown,
                     .start = -1,
                     .length = 0,
-                    .line = m_locations.back().line,
+                    .line = m_location.line,
                     .column = -1
                 }
             );
@@ -314,7 +339,7 @@ namespace XLang::Semantics {
                     .tag = Frontend::LexTag::unknown,
                     .start = -1,
                     .length = 0,
-                    .line = m_locations.back().line,
+                    .line = m_location.line,
                     .column = -1
                 }
             );
@@ -329,12 +354,16 @@ namespace XLang::Semantics {
 
             if (!compare_type_info(arg_info, callee_info.item_tags[arg_pos])) {
                 record_diagnosis(
-                    std::format(""),
+                    std::format(
+                        "Wrong type for argument #{} of procedure '{}'.",
+                        arg_pos,
+                        expr.func_name
+                    ),
                     Frontend::Token {
                         .tag = Frontend::LexTag::unknown,
                         .start = -1,
                         .length = 0,
-                        .line = m_locations.back().line,
+                        .line = m_location.line,
                         .column = -1
                     }
                 );
@@ -351,7 +380,7 @@ namespace XLang::Semantics {
     }
     
     std::any SemanticsPass::visit_variable_decl(const Syntax::VariableDecl& stmt) {
-        enter_location(m_locations.back().name, stmt.name.line);
+        m_location.line = stmt.name.line;
 
         const auto& var_type = stmt.typing;
         auto var_init_type = std::any_cast<TypeInfo>(
@@ -371,25 +400,28 @@ namespace XLang::Semantics {
                     .tag = Frontend::LexTag::unknown,
                     .start = -1,
                     .length = 0,
-                    .line = m_locations.back().line,
+                    .line = m_location.line,
                     .column = -1
                 }
             );
 
-            leave_location();
             return {};
         }
 
         /// @note Only record a variable name once it's fully processed... This avoids semantic weirdness like const a: int = a;
         record_name(var_name, var_type);
-        leave_location();
 
         return {};
     }
 
     std::any SemanticsPass::visit_function_decl(const Syntax::FunctionDecl& stmt) {
-        enter_location(m_locations.back().name, stmt.name.line);
         enter_scope();
+        std::string_view proc_name = Frontend::peek_lexeme(stmt.name, m_source);
+
+        m_location = {
+            .name = proc_name,
+            .line = stmt.name.line
+        };
 
         const auto ret_type = stmt.typing;
         std::vector<TypeInfo> arg_types;
@@ -400,25 +432,23 @@ namespace XLang::Semantics {
             arg_types.push_back(arg_type);
         }
 
-        record_name(Frontend::peek_lexeme(stmt.name, m_source), CallableType {
-            .item_tags = std::move(arg_types),
-            .result_tag = ret_type
-        });
+        record_proc_name(
+            proc_name,
+            CallableType {
+                .item_tags = std::move(arg_types),
+                .result_tag = ret_type
+            }
+        );
 
         stmt.body->accept_visitor(*this);
 
         leave_scope();
-        leave_location();
 
         return {};
     }
 
     std::any SemanticsPass::visit_expr_stmt(const Syntax::ExprStmt& stmt) {
-        enter_location("<anonymous-expr>", m_locations.back().line + 1);
-
         stmt.inner->accept_visitor(*this);
-
-        leave_location();
 
         return {};
     }
@@ -432,16 +462,16 @@ namespace XLang::Semantics {
     }
 
     std::any SemanticsPass::visit_return(const Syntax::Return& stmt) {
-        
         // 1. lookup semantic location of the parent procedure 
-        std::string_view parent_proc_name = m_locations.back().name;
-        auto parent_return_type = resolve_type_from(parent_proc_name);
-        
+        std::string_view parent_proc_name = m_location.name;
+        TypeInfo parent_return_type = PrimitiveType {
+            .item_tag = unpack_underlying_type_tag(resolve_type_from(parent_proc_name)),
+            .readonly = true
+        };
+
         auto returned_type = std::any_cast<TypeInfo>(
             stmt.result_expr->accept_visitor(*this)
         );
-        
-        enter_location("<anonymous-expr>", m_locations.back().line);
 
         // 2. compare type-info from the procedure with the returned type
         if (!compare_type_info(returned_type, parent_return_type)) {
@@ -455,13 +485,11 @@ namespace XLang::Semantics {
                     .tag = Frontend::LexTag::unknown,
                     .start = -1,
                     .length = 0,
-                    .line = m_locations.back().line,
+                    .line = m_location.line,
                     .column = -1
                 }
             );
         }
-
-        leave_location();
 
         return {};
     }
@@ -470,8 +498,6 @@ namespace XLang::Semantics {
         auto test_type = std::any_cast<TypeInfo>(
             stmt.test->accept_visitor(*this)
         );
-        
-        enter_location("<if-stmt>", m_locations.back().line + 1);
 
         if (!std::holds_alternative<PrimitiveType>(test_type)) {
             record_diagnosis(
@@ -483,12 +509,10 @@ namespace XLang::Semantics {
                     .tag = Frontend::LexTag::unknown,
                     .start = -1,
                     .length = 0,
-                    .line = m_locations.back().line,
+                    .line = m_location.line,
                     .column = -1
                 }
             );
-
-            leave_location();
 
             return {};
         }
@@ -505,7 +529,7 @@ namespace XLang::Semantics {
                     .tag = Frontend::LexTag::unknown,
                     .start = -1,
                     .length = 0,
-                    .line = m_locations.back().line,
+                    .line = m_location.line,
                     .column = -1
                 }
             );
@@ -516,8 +540,6 @@ namespace XLang::Semantics {
         if (stmt.falsy_body) {
             stmt.falsy_body->accept_visitor(*this);
         }
-
-        leave_location();
 
         return {};
     }
@@ -531,12 +553,11 @@ namespace XLang::Semantics {
         m_scopes.pop_back();
     }
 
-    void SemanticsPass::enter_location(std::string_view name, int line) {
-        m_locations.emplace_back(name, line);
-    }
-
-    void SemanticsPass::leave_location() {
-        m_locations.pop_back();
+    void SemanticsPass::record_proc_name(std::string_view name, TypeInfo info) {
+        m_scopes.front()[name] = SemanticEntry {
+            .type = std::move(info),
+            .value_group = ValuingTag::x_unknown_value
+        };
     }
 
     void SemanticsPass::record_name(std::string_view name, TypeInfo info) {
@@ -573,7 +594,7 @@ namespace XLang::Semantics {
         return NullType {};
     }
 
-    bool SemanticsPass::check_type_operation(OpTag op, const TypeInfo& arg_typing) {
+    SemanticsPass::OpTypeCheckResult SemanticsPass::check_type_operation(OpTag op, const TypeInfo& arg_typing) {
         const auto op_id = static_cast<unsigned int>(op);
 
         const auto unary_arg_type = ([](const TypeInfo& info) {
@@ -593,10 +614,13 @@ namespace XLang::Semantics {
 
         const auto arg_type_num = static_cast<unsigned int>(unary_arg_type);
 
-        return cm_basic_type_ops[op_id][arg_type_num];
+        return OpTypeCheckResult {
+            .result_data_type = arg_typing,
+            .ok = cm_basic_type_ops[op_id][arg_type_num]
+        };
     }
 
-    bool SemanticsPass::check_type_operation(OpTag op, const TypeInfo& lhs_typing, const TypeInfo& rhs_typing) {
+    SemanticsPass::OpTypeCheckResult SemanticsPass::check_type_operation(OpTag op, const TypeInfo& lhs_typing, const TypeInfo& rhs_typing) {
         const auto op_id = static_cast<unsigned int>(op);
 
         const auto lhs_is_sequential = lhs_typing.index() == 2 || lhs_typing.index() == 3;
@@ -608,15 +632,37 @@ namespace XLang::Semantics {
         if (const auto access_op_id = static_cast<unsigned int>(OpTag::access); op_id == access_op_id) {
             /// @note Check: sequential containers cannot be access keys but only integers can be for now.
             if (rhs_is_sequential || (lhs_is_sequential && (rhs_type != TypeTag::x_type_int))) {
-                return false;
+                return {
+                    .result_data_type = NullType {},
+                    .ok = false
+                };
             }
 
-            return true;
+            return {
+                .result_data_type = PrimitiveType {
+                    .item_tag = lhs_type,
+                    .readonly = true
+                },
+                .ok = false
+            };
         } else if (lhs_type != TypeTag::x_type_unknown && rhs_type != TypeTag::x_type_unknown) {
-            return cm_basic_type_ops[op_id][static_cast<unsigned int>(lhs_type)] == cm_basic_type_ops[op_id][static_cast<unsigned int>(rhs_type)];
+            const auto ops_ok = cm_basic_type_ops[op_id][static_cast<unsigned int>(lhs_type)] == cm_basic_type_ops[op_id][static_cast<unsigned int>(rhs_type)];
+            return {
+                .result_data_type = PrimitiveType {
+                    .item_tag = lhs_type,
+                    .readonly = true
+                },
+                .ok = ops_ok
+            };
         }
 
-        return true;
+        return {
+            .result_data_type = PrimitiveType {
+                .item_tag = TypeTag::x_type_unknown,
+                .readonly = true
+            },
+            .ok = true
+        };
     }
 
     void SemanticsPass::record_diagnosis(std::string message, Frontend::Token culprit) {

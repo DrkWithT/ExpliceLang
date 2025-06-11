@@ -61,6 +61,11 @@ namespace XLang::Semantics {
         std::any visit_if(const Syntax::If& stmt) override;
 
     private:
+        struct OpTypeCheckResult {
+            TypeInfo result_data_type;
+            bool ok;
+        };
+
         /// @note relates primitive type to supported operations in order to more concisely achieve type checking. The key types include bool, int, float, string which each map to all possible OpType values.
         static constexpr std::array<std::array<bool, static_cast<std::size_t>(OpTag::last)>, static_cast<std::size_t>(TypeTag::last)> cm_basic_type_ops = {
             std::array<bool, static_cast<std::size_t>(OpTag::last)> {true, true, false, false, false, false, false, false, true, true, false, false, true, true},
@@ -71,22 +76,21 @@ namespace XLang::Semantics {
         };
 
         std::vector<Scope> m_scopes;
-        std::vector<SemanticLocation> m_locations;
+        SemanticLocation m_location;
         SemanticDiagnoses m_result;
         std::string_view m_source;
 
         void enter_scope();
         void leave_scope();
-        void enter_location(std::string_view name, int line);
-        void leave_location();
 
+        void record_proc_name(std::string_view name, TypeInfo info);
         void record_name(std::string_view name, TypeInfo info);
         [[nodiscard]] bool resolve_name_existence(std::string_view name);
 
         /// @note If the name is undeclared, the TypeInfo contains a NullType.
         [[nodiscard]] TypeInfo resolve_type_from(std::string_view name);
-        [[nodiscard]] bool check_type_operation(OpTag op, const TypeInfo& arg_typing);
-        [[nodiscard]] bool check_type_operation(OpTag op, const TypeInfo& lhs_typing, const TypeInfo& rhs_typing);
+        [[nodiscard]] OpTypeCheckResult check_type_operation(OpTag op, const TypeInfo& arg_typing);
+        [[nodiscard]] OpTypeCheckResult check_type_operation(OpTag op, const TypeInfo& lhs_typing, const TypeInfo& rhs_typing);
 
         void record_diagnosis(std::string message, Frontend::Token culprit);
     };
