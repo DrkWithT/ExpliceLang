@@ -127,7 +127,14 @@ namespace XLang::Codegen {
         return m_current_name_map.at(name);
     }
 
-    const Locator& GraphPass::lookup_callable_name(std::string_view name) const {
+    Locator GraphPass::lookup_callable_name(std::string_view name) const {
+        if (m_native_hints_p->contains(name)) {
+            return Locator {
+                .region = Region::natives,
+                .id = m_native_hints_p->at(name).id
+            };
+        }
+
         return m_global_func_map.at(name);
     }
 
@@ -367,8 +374,8 @@ namespace XLang::Codegen {
     }
 
 
-    GraphPass::GraphPass(std::string_view old_source)
-    : m_heap_all {}, m_current_name_map {}, m_current_params_map {}, m_global_func_map {}, m_const_map {}, m_func_consts {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source}, m_stack_score {0}, m_main_func_idx {dud_offset} {}
+    GraphPass::GraphPass(std::string_view old_source, const Semantics::NativeHints* native_hints_p_) noexcept
+    : m_heap_all {}, m_current_name_map {}, m_current_params_map {}, m_global_func_map {}, m_const_map {}, m_func_consts {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source}, m_native_hints_p {native_hints_p_}, m_stack_score {0}, m_main_func_idx {dud_offset} {}
 
     std::any GraphPass::visit_literal(const Syntax::Literal& expr) {
         auto record_const_primitive = [this](Semantics::TypeTag tag, const Frontend::Token& primitive_token) {
@@ -509,15 +516,37 @@ namespace XLang::Codegen {
             expr.args[arg_iter]->accept_visitor(*this);
         }
 
-        place_step(BinaryStep {
-            .op = VM::Opcode::xop_call,
-            .arg_0 = func_locator,
-            .arg_1 = Locator {
-                .region = Region::none,
-                .id = args_n
-            }
-        });
+        if (func_locator.region == Region::routines) {
+            place_step(BinaryStep {
+                .op = VM::Opcode::xop_call,
+                .arg_0 = func_locator,
+                .arg_1 = Locator {
+                    .region = Region::none,
+                    .id = args_n
+                }
+            });
+        } else if (func_locator.region == Region::natives) {
+            /// @todo When modules are added, add logic in semantics and codegen to resolve arg_0! (0 is for the entry TU.)
+            place_step(TernaryStep {
+                .op = VM::Opcode::xop_call_native,
+                .arg_0 = Locator {
+                    .region = Region::none,
+                    .id = 0,
+                },
+                .arg_1 = func_locator,
+                .arg_2 = Locator {
+                    .region = Region::none,
+                    .id = args_n
+                }
+            });
+        } else {
+            throw std::logic_error {"Invalid IR locator passed for a call expression. The name must title a used native function or defined procedure."};
+        }
 
+        return {};
+    }
+
+    std::any visit_native_use([[maybe_unused]] const Syntax::NativeUse& stmt) {
         return {};
     }
 

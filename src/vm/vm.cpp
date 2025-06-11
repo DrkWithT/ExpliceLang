@@ -9,14 +9,12 @@ namespace XLang::VM {
     static constexpr Codegen::Locator placeholder_arg {Codegen::Region::none, -1}; 
 
     static auto decode_i32 = [] [[nodiscard]] (const std::vector<RuntimeByte>& code_buffer, int position) noexcept {
-        auto result = 0;
+        const auto result_0 = code_buffer[position] & 0x000000ff;
+        const auto result_1 = (code_buffer[position + 1] & 0x0000ff00) >> 8;
+        const auto result_2 = (code_buffer[position + 2] & 0x00ff0000) >> 16;
+        const auto result_3 = (code_buffer[position + 3] & 0xff000000) >> 24;
 
-        result += code_buffer[position] & 0x000000ff;
-        result += (code_buffer[position + 1] & 0x0000ff00) >> 8;
-        result += (code_buffer[position + 2] & 0x00ff0000) >> 16;
-        result += (code_buffer[position + 3] & 0xff000000) >> 24;
-
-        return result;
+        return result_0 + result_1 + result_2 + result_3;
     };
 
     VM::VM(XpliceProgram prgm) noexcept
@@ -132,7 +130,6 @@ namespace XLang::VM {
                 handle_call(op_args[0], op_args[1].id);
                 break;
             case Opcode::xop_call_native:
-                /// TODO: implement codegen for this within the graph_pass!!
                 handle_native_call(op_args[0].id, op_args[1].id, op_args[2].id);
                 break;
             default:
@@ -155,6 +152,7 @@ namespace XLang::VM {
         return func.ptr()(this, args);
     }
 
+    /// @note Registers a native function wrapper to the runtime. The `id` must ascend from 0 to N corresponding to the order of use-native statements!
     void VM::add_native_function(int native_id, const NativeFunction& func) noexcept {
         m_native_funcs[native_id] = func;
     }
@@ -180,9 +178,21 @@ namespace XLang::VM {
         const auto arg_byte_pos = opcode_stride + (arg_num * opcode_arg_stride);
 
         return {
-            .region = static_cast<Codegen::Region>(chunk_view[m_iptr + arg_byte_pos]),
-            .id = decode_i32(chunk_view, m_iptr + arg_byte_pos + 1)
+            .region = static_cast<Codegen::Region>(
+                chunk_view[m_iptr + arg_byte_pos]
+            ),
+            .id = static_cast<int>(
+                decode_i32(chunk_view, m_iptr + arg_byte_pos + 1)
+            )
         };
+    }
+
+    const Value& VM::peek_stack_top() const noexcept {
+        return m_values.back();
+    }
+
+    void VM::push_from_native(Value temp) noexcept {
+        m_values.emplace_back(std::move(temp));
     }
 
     void VM::handle_halt() {
@@ -388,7 +398,7 @@ namespace XLang::VM {
         m_iptr = 0;
     }
 
-    void VM::handle_native_call([[maybe_unused]] int module_id, [[maybe_unused]] int native_id, [[maybe_unused]] int argc) {
+    void VM::handle_native_call([[maybe_unused]] int module_id, int native_id, int argc) {
         ArgStore args;
 
         for (auto arg_count = 0; arg_count < argc; ++arg_count) {
