@@ -14,8 +14,11 @@ namespace XLang::Syntax {
         return Semantics::ValuingTag::x_out_value;
     }
 
-    std::any Literal::type_tagging() const {
-        return type;
+    Semantics::TypeInfo Literal::type_tagging() const {
+        return Semantics::PrimitiveType {
+            .item_tag = type,
+            .readonly = true,
+        };
     }
 
     ExprArity Literal::arity() const noexcept {
@@ -38,7 +41,7 @@ namespace XLang::Syntax {
         return Semantics::ValuingTag::x_unknown_value;
     }
 
-    std::any Unary::type_tagging() const {
+    Semantics::TypeInfo Unary::type_tagging() const {
         return inner->type_tagging();
     }
 
@@ -66,24 +69,20 @@ namespace XLang::Syntax {
         return Semantics::ValuingTag::x_out_value;
     }
 
-    std::any Binary::type_tagging() const {
-        const auto left_type = left->type_tagging();
+    Semantics::TypeInfo Binary::type_tagging() const {
+        const auto& left_type = left->type_tagging();
 
-        if (left_type.type() == typeid(Semantics::TypeTag)) {
-            if (const auto left_tag = std::any_cast<Semantics::TypeTag>(left_type); left_tag != Semantics::TypeTag::x_type_unknown) {
-                return left_tag;
-            }
+        if (!std::holds_alternative<Semantics::NullType>(left_type)) {
+            return left_type;
         }
 
-        const auto right_type = right->type_tagging();
+        const auto& right_type = right->type_tagging();
 
-        if (right_type.type() == typeid(Semantics::TypeTag)) {
-            if (const auto right_tag = std::any_cast<Semantics::TypeTag>(right_type); right_tag != Semantics::TypeTag::x_type_unknown) {
-                return right_tag;
-            }
+        if (!std::holds_alternative<Semantics::NullType>(right_type)) {
+            return right_type;
         }
 
-        return Semantics::TypeTag::x_type_unknown;
+        return Semantics::NullType {};
     }
 
     ExprArity Binary::arity() const noexcept {
@@ -106,8 +105,8 @@ namespace XLang::Syntax {
         return Semantics::ValuingTag::x_unknown_value;
     }
 
-    std::any Call::type_tagging() const {
-        return Semantics::TypeTag::x_type_unknown;
+    Semantics::TypeInfo Call::type_tagging() const {
+        return Semantics::NullType {};
     }
 
     ExprArity Call::arity() const noexcept {

@@ -26,6 +26,18 @@ add_test(NAME parser_test_3 COMMAND "$<TARGET_FILE:xlang_test_parser>" "${XLANG_
 # add_test(NAME parser_test_4 COMMAND "$<TARGET_FILE:xlang_test_parser>" "${XLANG_DEMO_DIR}/test_4.xlang")
 # add_test(NAME parser_test_5 COMMAND "$<TARGET_FILE:xlang_test_parser>" "${XLANG_DEMO_DIR}/test_5.xlang")
 
+# Test semantic checker...
+add_executable(xlang_test_sema)
+target_include_directories(xlang_test_sema PUBLIC ${XLANG_INC_DIR})
+target_link_directories(xlang_test_sema PRIVATE ${XLANG_LIB_DIR})
+target_sources(xlang_test_sema PRIVATE xlang_test_sema.cpp)
+target_link_libraries(xlang_test_sema PRIVATE frontend PRIVATE syntax PRIVATE semantics)
+
+add_test(NAME sema_test_0 COMMAND "$<TARGET_FILE:xlang_test_sema>" "${XLANG_DEMO_DIR}/test_0.xplice")
+add_test(NAME sema_test_1 COMMAND "$<TARGET_FILE:xlang_test_sema>" "${XLANG_DEMO_DIR}/test_1.xplice")
+add_test(NAME sema_test_2 COMMAND "$<TARGET_FILE:xlang_test_sema>" "${XLANG_DEMO_DIR}/test_2.xplice")
+add_test(NAME sema_test_3 COMMAND "$<TARGET_FILE:xlang_test_sema>" "${XLANG_DEMO_DIR}/test_3.xplice")
+
 # Test all codegen? MAYBE I should split this up into flow graph generation and actual bytecode gen.
 add_executable(xlang_test_codegen)
 target_link_directories(xlang_test_codegen PRIVATE "${XLANG_LIB_DIR}")

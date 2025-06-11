@@ -3,9 +3,9 @@
 #include <print>
 #include "frontend/files.hpp"
 #include "frontend/parser.hpp"
+#include "semantics/analysis.hpp"
 #include "codegen/graph_pass.hpp"
 #include "codegen/emit_pass.hpp"
-// #include "codegen/disassembler.hpp"
 #include "vm/vm.hpp"
 
 using namespace XLang;
@@ -19,11 +19,26 @@ using namespace XLang;
     auto [ast, parse_errors] = parser();
 
     if (!parse_errors.empty()) {
+        std::print("Parse errors of file at {}:\n\n", path_cstr);
+
         for (const auto& [msg, culprit] : parse_errors) {
-            std::print(std::cerr, "Syntax Error:\nCulprit '{}' at [{}:{}]\nNote: {}\n\n", Frontend::peek_lexeme(culprit, source_sv), culprit.line, culprit.column, msg);
+            std::print(std::cerr, "Culprit '{}' at [{}:{}]\nNote: {}\n\n", Frontend::peek_lexeme(culprit, source_sv), culprit.line, culprit.column, msg);
         }
 
-        throw std::logic_error {"Compilation failed: parse errors found."};
+        throw std::logic_error {"Compilation failed: parse error(s) found."};
+    }
+
+    Semantics::SemanticsPass sema {source_sv};
+    auto sema_errors = sema(ast);
+
+    if (!sema_errors.empty()) {
+        std::print(std::cerr, "Semantic errors of file '{}':\n", path_cstr);
+
+        for (const auto& [message, culprit_token] : sema_errors) {
+            std::print(std::cerr, "At [ln {}]\nNote: {}\n\n", culprit_token.line, message);
+        }
+
+        throw std::logic_error {"Compilation failed: semantic error(s) found."};
     }
 
     Codegen::GraphPass ir_emitter {source_sv};
@@ -50,7 +65,7 @@ int main(int argc, char* argv[]) {
         std::print(std::cout, "usage: xplice [--help | --version | <source-path>]\n");
         return 0;
     } else if (process_arg_sv == "--version") {
-        std::print(std::cout, "Xplice (runtime) v0.0.1\nContributor Link: github.com/DrkWithT\n");
+        std::print(std::cout, "Xplice (runtime) v0.2.0\nContributor Link: github.com/DrkWithT\n");
         return 0;
     }
 
@@ -63,7 +78,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
     } catch (const std::logic_error& compile_error) {
-        std::print(std::cerr, "CompileError:\n{}\n", compile_error.what());
+        std::print(std::cerr, "Compile Error:\n{}\n", compile_error.what());
         return 1;
     } catch (const std::runtime_error& vm_error) {
         std::print(std::cerr, "RuntimeError:\n{}\n", vm_error.what());
