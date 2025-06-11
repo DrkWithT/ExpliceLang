@@ -2,6 +2,35 @@
 #include "syntax/stmts.hpp"
 
 namespace XLang::Syntax {
+    NativeUse::NativeUse(Semantics::TypeInfo typing_, std::vector<ArgDecl> args_, Frontend::Token native_name_) noexcept
+    : typing {std::move(typing_)}, args {std::move(args_)}, native_name {native_name_} {}
+
+    bool NativeUse::is_declarative() const noexcept {
+        return true;
+    }
+
+    bool NativeUse::is_control_flow() const noexcept {
+        return false;
+    }
+
+    bool NativeUse::is_expr_stmt() const noexcept {
+        return false;
+    }
+
+    /// @note This actually gives the full signature of a "used" native function.
+    Semantics::TypeInfo NativeUse::possible_result_type() const noexcept {
+        return typing;
+    }
+
+    void NativeUse::accept_visitor(StmtVisitor<void>& visitor) const {
+        visitor.visit_native_use(*this);
+    }
+
+    std::any NativeUse::accept_visitor(StmtVisitor<std::any>& visitor) const {
+        return visitor.visit_native_use(*this);
+    }
+
+
     Import::Import(const Frontend::Token& unit_name_) noexcept
     : unit_name {unit_name_} {}
 

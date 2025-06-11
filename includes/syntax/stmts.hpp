@@ -9,7 +9,28 @@
 
 namespace XLang::Syntax {
     using StmtPtr = std::unique_ptr<Stmt>;
-    
+
+    struct ArgDecl {
+        Semantics::TypeInfo type;
+        Frontend::Token name;
+    };
+
+    /// @brief Represents `<use-native>` statements within Xplice code so that native functions are both forward declared and activated.
+    struct NativeUse : public Stmt {
+        Semantics::TypeInfo typing;
+        std::vector<ArgDecl> args;
+        Frontend::Token native_name;
+
+        NativeUse(Semantics::TypeInfo typing_, std::vector<ArgDecl> args_, Frontend::Token native_name_) noexcept;
+
+        bool is_declarative() const noexcept override;
+        bool is_control_flow() const noexcept override;
+        bool is_expr_stmt() const noexcept override;
+        Semantics::TypeInfo possible_result_type() const noexcept override;
+        void accept_visitor(StmtVisitor<void>& visitor) const override;
+        std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
+    };
+
     struct Import : public Stmt {
         Frontend::Token unit_name;
 
@@ -37,11 +58,6 @@ namespace XLang::Syntax {
         Semantics::TypeInfo possible_result_type() const noexcept override;
         void accept_visitor(StmtVisitor<void>& visitor) const override;
         std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
-    };
-
-    struct ArgDecl {
-        Semantics::TypeInfo type;
-        Frontend::Token name;
     };
 
     struct FunctionDecl : public Stmt {

@@ -278,13 +278,38 @@ namespace XLang::Frontend {
         if (start_keyword == "import") {
             // std::cout << "parse_top_stmt(...) --> import\n";
             return parse_import();
+        } else if (start_keyword == "use") {
+            return parse_native_use();
         } else if (start_keyword == "func") {
             // std::cout << "parse_top_stmt(...) --> func-decl\n";
             return parse_function_decl();
         }
 
-        m_errors.emplace_back("Invalid keyword for expected top-level statement e.g import, func-decl.", peek_at(0));
+        m_errors.emplace_back("Invalid keyword for expected top-level statement e.g import, use-native, func-decl.", peek_at(0));
         throw std::runtime_error {"SYNTAX ERROR\n"};
+    }
+
+    Syntax::StmtPtr Parser::parse_native_use() {
+        consume();
+
+        if (auto native_kind = Frontend::peek_lexeme(peek_at(0), m_lexer.view_source()); native_kind != "func") {
+            m_errors.emplace_back("Invalid keyword for use-native statement, expected 'func'.", peek_at(0));
+            throw std::runtime_error {"SYNTAX ERROR\n"};
+        }
+
+        consume();
+
+        auto native_name = peek_at(0);
+        consume();
+
+        auto native_param_list = parse_arg_list();
+
+        consume(LexTag::colon);
+        auto native_return_type = parse_type_specifier();
+
+        consume(LexTag::semicolon);
+
+        return std::make_unique<Syntax::NativeUse>(std::move(native_return_type), std::move(native_param_list), native_name);
     }
 
     Syntax::StmtPtr Parser::parse_import() {

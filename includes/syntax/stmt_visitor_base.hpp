@@ -1,6 +1,7 @@
 #pragma once
 
 namespace XLang::Syntax {
+    struct NativeUse;
     struct Import;
     struct VariableDecl;
     struct FunctionDecl;
@@ -14,6 +15,7 @@ namespace XLang::Syntax {
     public:
         virtual ~StmtVisitor() = default;
 
+        virtual Result visit_native_use(const NativeUse& stmt) = 0;
         virtual Result visit_import(const Import& stmt) = 0;
         virtual Result visit_variable_decl(const VariableDecl& stmt) = 0;
         virtual Result visit_function_decl(const FunctionDecl& stmt) = 0;
