@@ -5,23 +5,19 @@ Xplice is my first ever stack-bytecode-based language. The goal of this language
 
 ### Philosophy:
  - Explicit behavior is better for understanding.
- - Concise and clear code helps maintainability.
- - It just works.
+ - Feature creep is bad for traction.
+ - Concise and clear code helps its maintainability.
 
 ### More Docs:
  - [Grammar](./docs/grammar.md)
  - [VM](./docs/vm.md)
 
-### Roadmap:
- - Add native function support!
- - Add while loop support.
- - Add optimization passes for:
-   - Dead branches in control flow.
-   - Peephole optimizing by replacing "useless" instructions.
- - Add support for imports of native functions!
- - Add array and tuple parsing support.
- - Add array and tuple codegen support.
- - Finally add string codegen support!
-
-### Changes:
+### Roadmap of Changes:
+ - **0.1.0** Created the initial bytecode interpreter. Runs Fibonacci.
  - **0.2.0** Added some semantic checking to the bytecode compiler.
+ - **0.3.0** Some support for native functions added.
+ - **0.4.0?** While loops will be added after some IR overhauls.
+ - **0.5.0?** Two basic optimization passes will be added.
+ - **0.6.0?** Sequential types (array, tuple) will be added with a mark-and-sweep GC.
+ - **0.7.0?** Add actual strings.
+ - More versions will be planned...
