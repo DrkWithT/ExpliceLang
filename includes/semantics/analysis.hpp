@@ -25,6 +25,11 @@ namespace XLang::Semantics {
         ValuingTag value_group;
     };
 
+    struct SemanticNativeEntry {
+        TypeInfo signature_type;
+        int id;
+    };
+
     struct SemanticLocation {
         std::string_view name;
         int line;
@@ -37,7 +42,13 @@ namespace XLang::Semantics {
         friend std::string stringify_sema_dump(const SemanticDump& dump);
     };
 
+    struct SemanticResult {
+        std::unordered_map<std::string_view, SemanticNativeEntry> native_hints;
+        std::vector<SemanticDump> errors;
+    };
+
     using Scope = std::unordered_map<std::string_view, SemanticEntry>;
+    using NativeHints = std::unordered_map<std::string_view, SemanticNativeEntry>;
     using SemanticDiagnoses = std::vector<SemanticDump>;
 
     /// @brief Checks for any undefined names and does simple type checking.
@@ -45,13 +56,14 @@ namespace XLang::Semantics {
     public:
         SemanticsPass(std::string_view source_);
 
-        [[nodiscard]] SemanticDiagnoses operator()(const std::vector<Syntax::StmtPtr>& ast_decls);
+        [[nodiscard]] SemanticResult operator()(const std::vector<Syntax::StmtPtr>& ast_decls);
 
         std::any visit_literal(const Syntax::Literal& expr) override;
         std::any visit_unary(const Syntax::Unary& expr) override;
         std::any visit_binary(const Syntax::Binary& expr) override;
         std::any visit_call(const Syntax::Call& expr) override;
 
+        std::any visit_native_use(const Syntax::NativeUse& stmt) override;
         std::any visit_import(const Syntax::Import& stmt) override;
         std::any visit_variable_decl(const Syntax::VariableDecl& stmt) override;
         std::any visit_function_decl(const Syntax::FunctionDecl& stmt) override;
@@ -75,6 +87,7 @@ namespace XLang::Semantics {
             {false, false, false, false, false, false, false, false, false, false, false, false, false, false}
         };
 
+        NativeHints m_native_hints;
         std::vector<Scope> m_scopes;
         SemanticLocation m_location;
         SemanticDiagnoses m_result;
@@ -86,6 +99,8 @@ namespace XLang::Semantics {
         void record_proc_name(std::string_view name, TypeInfo info);
         void record_name(std::string_view name, TypeInfo info);
         [[nodiscard]] bool resolve_name_existence(std::string_view name);
+
+        void record_native_name(std::string_view name, TypeInfo info);
 
         /// @note If the name is undeclared, the TypeInfo contains a NullType.
         [[nodiscard]] TypeInfo resolve_type_from(std::string_view name);
