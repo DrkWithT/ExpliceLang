@@ -337,7 +337,11 @@ namespace XLang::Semantics {
 
         if (const auto real_argc = callee_info.item_tags.size(); argc != real_argc) {
             record_diagnosis(
-                std::format(""),
+                std::format(
+                    "Invalid argument count of {} passed to procedure '{}'.",
+                    argc,
+                    callee_name
+                ),
                 Frontend::Token {
                     .tag = Frontend::LexTag::unknown,
                     .start = -1,
@@ -380,9 +384,18 @@ namespace XLang::Semantics {
 
     std::any SemanticsPass::visit_native_use(const Syntax::NativeUse& stmt) {
         auto native_name = Frontend::peek_lexeme(stmt.native_name, m_source);
-        auto native_fwd_type = stmt.typing;
+        std::vector<TypeInfo> params_info;
 
-        record_native_name(native_name, native_fwd_type);
+        for (const auto& temp : stmt.args) {
+            params_info.emplace_back(temp.type);
+        }
+
+        record_native_name(native_name, TypeInfo {
+            CallableType {
+                .item_tags = std::move(params_info),
+                .result_tag = stmt.possible_result_type()
+            }
+        });
 
         return {};
     }

@@ -118,7 +118,14 @@ namespace XLang::Codegen {
         }
     }
 
-    const Locator& GraphPass::lookup_named_location(std::string_view name) const {
+    Locator GraphPass::lookup_named_location(std::string_view name) const {
+        if (m_native_hints_p->contains(name)) {
+            return {
+                .region = Region::natives,
+                .id = m_native_hints_p->at(name).id
+            };
+        }
+
         /// @note Check for params. first since they're processed 1st.
         if (auto param_it = m_current_params_map.find(name); param_it != m_current_params_map.end()) {
             return param_it->second;
@@ -435,7 +442,11 @@ namespace XLang::Codegen {
             };
         };
 
-        const auto primitive_tag = std::any_cast<Semantics::TypeTag>(expr.type_tagging());
+        auto primitive_info = expr.type_tagging();
+        const auto primitive_tag = (std::holds_alternative<Semantics::PrimitiveType>(primitive_info))
+            ? std::get<Semantics::PrimitiveType>(primitive_info).item_tag
+            : Semantics::TypeTag::x_type_unknown;
+
         const auto& expr_token = expr.token;
         auto literal_lexeme = Frontend::peek_lexeme(expr_token, m_old_src);
 
@@ -546,7 +557,7 @@ namespace XLang::Codegen {
         return {};
     }
 
-    std::any visit_native_use([[maybe_unused]] const Syntax::NativeUse& stmt) {
+    std::any GraphPass::visit_native_use([[maybe_unused]] const Syntax::NativeUse& stmt) {
         return {};
     }
 
@@ -692,10 +703,11 @@ namespace XLang::Codegen {
     IRStore GraphPass::process(const std::vector<Syntax::StmtPtr>& ast) {
         const auto decls_n = static_cast<int>(ast.size());
 
-        for (auto func_decl_idx = 0; func_decl_idx < decls_n; ++func_decl_idx) {
-            ast[func_decl_idx]->accept_visitor(*this);
-
-            commit_nodes_to_graph(func_decl_idx == decls_n - 1);
+        for (auto decl_idx = 0; decl_idx < decls_n; ++decl_idx) {
+            if (!ast[decl_idx]->is_directive()) {
+                ast[decl_idx]->accept_visitor(*this);
+                commit_nodes_to_graph(decl_idx == decls_n - 1);
+            }
         }
 
         return {

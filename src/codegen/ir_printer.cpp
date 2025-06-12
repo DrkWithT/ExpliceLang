@@ -38,6 +38,7 @@ namespace XLang::Codegen {
         "stack",
         "heap",
         "routines",
+        "natives",
         "frame_slot",
         "none"
     };

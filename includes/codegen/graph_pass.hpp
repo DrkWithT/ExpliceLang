@@ -125,7 +125,7 @@ namespace XLang::Codegen {
         [[nodiscard]] Locator new_obj_location(Semantics::ArrayType array_tag);
         [[nodiscard]] Locator new_obj_location(Semantics::TupleType tuple_tag);
         [[maybe_unused]] bool delete_location(const Locator& loc);
-        const Locator& lookup_named_location(std::string_view name) const;
+        [[nodiscard]] Locator lookup_named_location(std::string_view name) const;
         [[nodiscard]] Locator lookup_callable_name(std::string_view name) const;
 
         void commit_current_consts();
