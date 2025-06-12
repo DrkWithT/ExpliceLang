@@ -7,6 +7,7 @@
 #include <variant>
 #include <vector>
 #include "semantics/tags.hpp"
+#include "semantics/analysis.hpp"
 #include "syntax/expr_visitor_base.hpp"
 #include "syntax/stmt_visitor_base.hpp"
 #include "syntax/stmts.hpp"
@@ -109,6 +110,8 @@ namespace XLang::Codegen {
 
         std::string_view m_old_src;
 
+        const Semantics::NativeHints* m_native_hints_p;
+
         /// @note simulates size of a callee's stack values frame
         int m_stack_score;
 
@@ -118,15 +121,12 @@ namespace XLang::Codegen {
         [[nodiscard]] int next_const_id() noexcept;
         [[nodiscard]] int next_func_id() noexcept;
         [[nodiscard]] int next_param_id() noexcept;
-        // [[nodiscard]] int curr_const_id() noexcept;
-        // [[nodiscard]] int curr_local_id() noexcept;
-        // [[nodiscard]] int curr_func_id() noexcept;
-        // [[nodiscard]] int curr_param_id() noexcept;
+
         [[nodiscard]] Locator new_obj_location(Semantics::ArrayType array_tag);
         [[nodiscard]] Locator new_obj_location(Semantics::TupleType tuple_tag);
         [[maybe_unused]] bool delete_location(const Locator& loc);
-        const Locator& lookup_named_location(std::string_view name) const;
-        const Locator& lookup_callable_name(std::string_view name) const;
+        [[nodiscard]] Locator lookup_named_location(std::string_view name) const;
+        [[nodiscard]] Locator lookup_callable_name(std::string_view name) const;
 
         void commit_current_consts();
 
@@ -145,13 +145,14 @@ namespace XLang::Codegen {
         [[nodiscard]] std::any help_gen_assign(const Syntax::Binary& expr);
 
     public:
-        GraphPass(std::string_view old_source);
+        GraphPass(std::string_view old_source, const Semantics::NativeHints* native_hints_p_) noexcept;
 
         [[nodiscard]] std::any visit_literal(const Syntax::Literal& expr) override;
         [[nodiscard]] std::any visit_unary(const Syntax::Unary& expr) override;
         [[nodiscard]] std::any visit_binary(const Syntax::Binary& expr) override;
         [[nodiscard]] std::any visit_call(const Syntax::Call& expr) override;
 
+        [[nodiscard]] std::any visit_native_use(const Syntax::NativeUse& stmt) override;
         [[nodiscard]] std::any visit_import(const Syntax::Import& stmt) override;
         [[nodiscard]] std::any visit_variable_decl(const Syntax::VariableDecl& stmt) override;
         [[maybe_unused]] std::any visit_function_decl(const Syntax::FunctionDecl& stmt) override;

@@ -2,8 +2,44 @@
 #include "syntax/stmts.hpp"
 
 namespace XLang::Syntax {
+    NativeUse::NativeUse(Semantics::TypeInfo typing_, std::vector<ArgDecl> args_, Frontend::Token native_name_) noexcept
+    : typing {std::move(typing_)}, args {std::move(args_)}, native_name {native_name_} {}
+
+    bool NativeUse::is_directive() const noexcept {
+        return true;
+    }
+
+    bool NativeUse::is_declarative() const noexcept {
+        return true;
+    }
+
+    bool NativeUse::is_control_flow() const noexcept {
+        return false;
+    }
+
+    bool NativeUse::is_expr_stmt() const noexcept {
+        return false;
+    }
+
+    Semantics::TypeInfo NativeUse::possible_result_type() const noexcept {
+        return typing;
+    }
+
+    void NativeUse::accept_visitor(StmtVisitor<void>& visitor) const {
+        visitor.visit_native_use(*this);
+    }
+
+    std::any NativeUse::accept_visitor(StmtVisitor<std::any>& visitor) const {
+        return visitor.visit_native_use(*this);
+    }
+
+
     Import::Import(const Frontend::Token& unit_name_) noexcept
     : unit_name {unit_name_} {}
+
+    bool Import::is_directive() const noexcept {
+        return true;
+    }
 
     bool Import::is_declarative() const noexcept {
         return true;
@@ -33,6 +69,10 @@ namespace XLang::Syntax {
     VariableDecl::VariableDecl(Semantics::TypeInfo typing_, const Frontend::Token& name_, ExprPtr init_expr_, bool readonly_) noexcept
     : typing {std::move(typing_)}, name {name_}, init_expr {std::move(init_expr_)}, readonly {readonly_} {}
 
+    bool VariableDecl::is_directive() const noexcept {
+        return false;
+    }
+
     bool VariableDecl::is_declarative() const noexcept {
         return true;
     }
@@ -61,6 +101,10 @@ namespace XLang::Syntax {
     FunctionDecl::FunctionDecl(Semantics::TypeInfo typing_, const std::vector<ArgDecl>& args_, const Frontend::Token& name_, StmtPtr body_) noexcept
     : typing {std::move(typing_)}, args {args_}, name {name_}, body {std::move(body_)} {}
 
+    bool FunctionDecl::is_directive() const noexcept {
+        return false;
+    }
+
     bool FunctionDecl::is_declarative() const noexcept {
         return true;
     }
@@ -88,6 +132,10 @@ namespace XLang::Syntax {
 
     ExprStmt::ExprStmt(ExprPtr inner_) noexcept
     : inner {std::move(inner_)} {}
+
+    bool ExprStmt::is_directive() const noexcept {
+        return false;
+    }
 
     bool ExprStmt::is_declarative() const noexcept {
         return false;
@@ -119,6 +167,10 @@ namespace XLang::Syntax {
     Block::Block(std::vector<StmtPtr> stmts_) noexcept
     : stmts {std::move(stmts_)} {}
 
+    bool Block::is_directive() const noexcept {
+        return false;
+    }
+
     bool Block::is_declarative() const noexcept {
         return false;
     }
@@ -146,6 +198,10 @@ namespace XLang::Syntax {
 
     Return::Return(ExprPtr result_expr_) noexcept
     : result_expr {std::move(result_expr_)} {}
+
+    bool Return::is_directive() const noexcept {
+        return false;
+    }
 
     bool Return::is_declarative() const noexcept {
         return false;
@@ -176,6 +232,10 @@ namespace XLang::Syntax {
 
     If::If(ExprPtr test_, StmtPtr truthy_body_, StmtPtr falsy_body_) noexcept
     : test {std::move(test_)}, truthy_body {std::move(truthy_body_)}, falsy_body {std::move(falsy_body_)} {};
+
+    bool If::is_directive() const noexcept {
+        return false;
+    }
 
     bool If::is_declarative() const noexcept {
         return false;

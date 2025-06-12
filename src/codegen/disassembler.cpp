@@ -60,6 +60,11 @@ namespace XLang::Codegen {
                 print_arg();
                 print_arg();
                 break;
+            case 3:
+                print_arg();
+                print_arg();
+                print_arg();
+                break;
             default:
                 std::print("...");
                 break;

@@ -24,7 +24,7 @@ using namespace XLang;
     }
 
     Semantics::SemanticsPass sema {source_view};
-    auto sema_errors = sema(parse_result.decls);
+    auto [sema_native_hints, sema_errors] = sema(parse_result.decls);
 
     if (!sema_errors.empty()) {
         std::print(std::cerr, "Semantic errors in file '{}':\n", file_name);

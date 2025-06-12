@@ -62,6 +62,7 @@ namespace XLang::Frontend {
 
         [[nodiscard]] ParseDump parse_program();
         [[nodiscard]] Syntax::StmtPtr parse_top_stmt();
+        [[nodiscard]] Syntax::StmtPtr parse_native_use();
         [[nodiscard]] Syntax::StmtPtr parse_import();
         [[nodiscard]] Syntax::StmtPtr parse_function_decl();
         [[nodiscard]] std::vector<Syntax::ArgDecl> parse_arg_list();

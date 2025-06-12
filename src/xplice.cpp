@@ -6,6 +6,7 @@
 #include "semantics/analysis.hpp"
 #include "codegen/graph_pass.hpp"
 #include "codegen/emit_pass.hpp"
+#include "vm/chunk.hpp"
 #include "vm/vm.hpp"
 
 using namespace XLang;
@@ -29,7 +30,7 @@ using namespace XLang;
     }
 
     Semantics::SemanticsPass sema {source_sv};
-    auto sema_errors = sema(ast);
+    auto [sema_native_hints, sema_errors] = sema(ast);
 
     if (!sema_errors.empty()) {
         std::print(std::cerr, "Semantic errors of file '{}':\n", path_cstr);
@@ -41,16 +42,32 @@ using namespace XLang;
         throw std::logic_error {"Compilation failed: semantic error(s) found."};
     }
 
-    Codegen::GraphPass ir_emitter {source_sv};
+    Codegen::GraphPass ir_emitter {source_sv, &sema_native_hints};
     auto [ir_func_constants, ir_func_graphs, ir_main_id] = ir_emitter.process(ast);
 
     Codegen::EmitCodePass bytecode_emitter;
     auto prgm_ptr = bytecode_emitter.process_full_ir(ir_func_constants, *ir_func_graphs, ir_main_id);
 
-    // Codegen::Disassembler bytecode_printer;
-    // bytecode_printer(*prgm_ptr);
-
     return {std::move(*prgm_ptr)};
+}
+
+[[nodiscard]] VM::Errcode native_print_int(VM::VM* vm_p, const VM::ArgStore& argv) {
+    VM::Value target = argv.at(0);
+    const auto& target_box = target.inner_box();
+
+    if (!std::holds_alternative<int>(target_box)) {
+        vm_p->push_from_native(VM::Value {
+            1
+        });
+        return VM::Errcode::xerr_general;
+    }
+
+    std::print("{} ", std::get<int>(target_box));
+
+    vm_p->push_from_native(VM::Value {
+        0
+    });
+    return VM::Errcode::xerr_normal;
 }
 
 int main(int argc, char* argv[]) {
@@ -65,12 +82,19 @@ int main(int argc, char* argv[]) {
         std::print(std::cout, "usage: xplice [--help | --version | <source-path>]\n");
         return 0;
     } else if (process_arg_sv == "--version") {
-        std::print(std::cout, "Xplice (runtime) v0.2.0\nContributor Link: github.com/DrkWithT\n");
+        std::print(std::cout, "Xplice (runtime) v0.3.0\nContributor Link: github.com/DrkWithT\n");
         return 0;
     }
 
+    VM::NativeFunction wrap_print_int {native_print_int};
+
     try {
+        /// 1. Initialize VM...
         VM::VM engine {compile_source(argv[1])};
+
+        /// 2. Register a print function for convenience...
+        engine.add_native_function(0, wrap_print_int);
+
         auto error_status = engine.run();
 
         if (error_status != VM::Errcode::xerr_normal) {

@@ -211,7 +211,7 @@ namespace XLang::Codegen {
 
                 const auto& ir_unit = ir_steps[node_id];
 
-                if (ir_unit.index() == 0) {
+                if (std::holds_alternative<Unit>(ir_unit)) {
                     const auto& [steps, next_id] = std::get<Unit>(ir_unit);
 
                     for (const auto& step : steps) {

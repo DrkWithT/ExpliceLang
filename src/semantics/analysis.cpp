@@ -149,9 +149,9 @@ namespace XLang::Semantics {
     }
 
     SemanticsPass::SemanticsPass(std::string_view source_)
-    : m_scopes {}, m_location {}, m_source {source_} {}
+    : m_native_hints {}, m_scopes {}, m_location {}, m_source {source_} {}
 
-    SemanticDiagnoses SemanticsPass::operator()(const std::vector<Syntax::StmtPtr>& ast_decls) {
+    SemanticResult SemanticsPass::operator()(const std::vector<Syntax::StmtPtr>& ast_decls) {
         enter_scope(); // begin processing global scope
 
         for (const auto& decl : ast_decls) {
@@ -164,7 +164,10 @@ namespace XLang::Semantics {
 
         leave_scope(); // end processing of global scope
 
-        return {std::move(m_result)};
+        return {
+            .errors = std::move(m_result),
+            .native_hints = std::move(m_native_hints)
+        };
     }
 
 
@@ -334,7 +337,11 @@ namespace XLang::Semantics {
 
         if (const auto real_argc = callee_info.item_tags.size(); argc != real_argc) {
             record_diagnosis(
-                std::format(""),
+                std::format(
+                    "Invalid argument count of {} passed to procedure '{}'.",
+                    argc,
+                    callee_name
+                ),
                 Frontend::Token {
                     .tag = Frontend::LexTag::unknown,
                     .start = -1,
@@ -373,6 +380,24 @@ namespace XLang::Semantics {
         }
 
         return callee_info.result_tag;
+    }
+
+    std::any SemanticsPass::visit_native_use(const Syntax::NativeUse& stmt) {
+        auto native_name = Frontend::peek_lexeme(stmt.native_name, m_source);
+        std::vector<TypeInfo> params_info;
+
+        for (const auto& temp : stmt.args) {
+            params_info.emplace_back(temp.type);
+        }
+
+        record_native_name(native_name, TypeInfo {
+            CallableType {
+                .item_tags = std::move(params_info),
+                .result_tag = stmt.possible_result_type()
+            }
+        });
+
+        return {};
     }
 
     std::any SemanticsPass::visit_import([[maybe_unused]] const Syntax::Import& stmt) {
@@ -574,6 +599,10 @@ namespace XLang::Semantics {
     }
 
     bool SemanticsPass::resolve_name_existence(std::string_view name) {
+        if (m_native_hints.contains(name)) {
+            return true;
+        }
+
         /// @note Static scoping is intended, so lookups walk up the scope stack.
         for (const auto& scope : m_scopes) {
             if (scope.contains(name)) {
@@ -584,7 +613,25 @@ namespace XLang::Semantics {
         return false;
     }
 
+    void SemanticsPass::record_native_name(std::string_view name, TypeInfo info) {
+        /// @todo Handle cases of native name re-declaration?
+        if (m_native_hints.contains(name)) {
+            return;
+        }
+
+        const auto next_native_id = static_cast<int>(m_native_hints.size());
+
+        m_native_hints[name] = SemanticNativeEntry {
+            .signature_type = std::move(info),
+            .id = next_native_id
+        };
+    }
+
     TypeInfo SemanticsPass::resolve_type_from(std::string_view name) {
+        if (m_native_hints.contains(name)) {
+            return m_native_hints.at(name).signature_type;
+        }
+
         for (const auto& scope : m_scopes) {
             if (scope.contains(name)) {
                 return scope.at(name).type;

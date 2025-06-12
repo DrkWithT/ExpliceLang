@@ -118,7 +118,14 @@ namespace XLang::Codegen {
         }
     }
 
-    const Locator& GraphPass::lookup_named_location(std::string_view name) const {
+    Locator GraphPass::lookup_named_location(std::string_view name) const {
+        if (m_native_hints_p->contains(name)) {
+            return {
+                .region = Region::natives,
+                .id = m_native_hints_p->at(name).id
+            };
+        }
+
         /// @note Check for params. first since they're processed 1st.
         if (auto param_it = m_current_params_map.find(name); param_it != m_current_params_map.end()) {
             return param_it->second;
@@ -127,7 +134,14 @@ namespace XLang::Codegen {
         return m_current_name_map.at(name);
     }
 
-    const Locator& GraphPass::lookup_callable_name(std::string_view name) const {
+    Locator GraphPass::lookup_callable_name(std::string_view name) const {
+        if (m_native_hints_p->contains(name)) {
+            return Locator {
+                .region = Region::natives,
+                .id = m_native_hints_p->at(name).id
+            };
+        }
+
         return m_global_func_map.at(name);
     }
 
@@ -367,8 +381,8 @@ namespace XLang::Codegen {
     }
 
 
-    GraphPass::GraphPass(std::string_view old_source)
-    : m_heap_all {}, m_current_name_map {}, m_current_params_map {}, m_global_func_map {}, m_const_map {}, m_func_consts {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source}, m_stack_score {0}, m_main_func_idx {dud_offset} {}
+    GraphPass::GraphPass(std::string_view old_source, const Semantics::NativeHints* native_hints_p_) noexcept
+    : m_heap_all {}, m_current_name_map {}, m_current_params_map {}, m_global_func_map {}, m_const_map {}, m_func_consts {}, m_nodes {}, m_graph {std::make_unique<FlowGraph>()}, m_result {new FlowStore {}}, m_old_src {old_source}, m_native_hints_p {native_hints_p_}, m_stack_score {0}, m_main_func_idx {dud_offset} {}
 
     std::any GraphPass::visit_literal(const Syntax::Literal& expr) {
         auto record_const_primitive = [this](Semantics::TypeTag tag, const Frontend::Token& primitive_token) {
@@ -428,7 +442,11 @@ namespace XLang::Codegen {
             };
         };
 
-        const auto primitive_tag = std::any_cast<Semantics::TypeTag>(expr.type_tagging());
+        auto primitive_info = expr.type_tagging();
+        const auto primitive_tag = (std::holds_alternative<Semantics::PrimitiveType>(primitive_info))
+            ? std::get<Semantics::PrimitiveType>(primitive_info).item_tag
+            : Semantics::TypeTag::x_type_unknown;
+
         const auto& expr_token = expr.token;
         auto literal_lexeme = Frontend::peek_lexeme(expr_token, m_old_src);
 
@@ -509,15 +527,37 @@ namespace XLang::Codegen {
             expr.args[arg_iter]->accept_visitor(*this);
         }
 
-        place_step(BinaryStep {
-            .op = VM::Opcode::xop_call,
-            .arg_0 = func_locator,
-            .arg_1 = Locator {
-                .region = Region::none,
-                .id = args_n
-            }
-        });
+        if (func_locator.region == Region::routines) {
+            place_step(BinaryStep {
+                .op = VM::Opcode::xop_call,
+                .arg_0 = func_locator,
+                .arg_1 = Locator {
+                    .region = Region::none,
+                    .id = args_n
+                }
+            });
+        } else if (func_locator.region == Region::natives) {
+            /// @todo When modules are added, add logic in semantics and codegen to resolve arg_0! (0 is for the entry TU.)
+            place_step(TernaryStep {
+                .op = VM::Opcode::xop_call_native,
+                .arg_0 = Locator {
+                    .region = Region::none,
+                    .id = 0,
+                },
+                .arg_1 = func_locator,
+                .arg_2 = Locator {
+                    .region = Region::none,
+                    .id = args_n
+                }
+            });
+        } else {
+            throw std::logic_error {"Invalid IR locator passed for a call expression. The name must title a used native function or defined procedure."};
+        }
 
+        return {};
+    }
+
+    std::any GraphPass::visit_native_use([[maybe_unused]] const Syntax::NativeUse& stmt) {
         return {};
     }
 
@@ -663,10 +703,11 @@ namespace XLang::Codegen {
     IRStore GraphPass::process(const std::vector<Syntax::StmtPtr>& ast) {
         const auto decls_n = static_cast<int>(ast.size());
 
-        for (auto func_decl_idx = 0; func_decl_idx < decls_n; ++func_decl_idx) {
-            ast[func_decl_idx]->accept_visitor(*this);
-
-            commit_nodes_to_graph(func_decl_idx == decls_n - 1);
+        for (auto decl_idx = 0; decl_idx < decls_n; ++decl_idx) {
+            if (!ast[decl_idx]->is_directive()) {
+                ast[decl_idx]->accept_visitor(*this);
+                commit_nodes_to_graph(decl_idx == decls_n - 1);
+            }
         }
 
         return {

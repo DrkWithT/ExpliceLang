@@ -2,6 +2,7 @@
 #include <print>
 #include "frontend/files.hpp"
 #include "frontend/parser.hpp"
+#include "semantics/analysis.hpp"
 #include "codegen/graph_pass.hpp"
 #include "codegen/ir_printer.hpp"
 #include "codegen/emit_pass.hpp"
@@ -12,10 +13,10 @@ using namespace XLang;
 [[nodiscard]] constexpr bool test_codegen_on(std::string_view source_view, std::string_view file_name) {
     Frontend::Parser parser {source_view};
 
-    auto parse_result = parser();
+    auto [ast , parse_errors] = parser();
 
     /// Print any parsing errors for debugging purposes.
-    if (const auto& parse_errors = parse_result.errors; !parse_errors.empty()) {
+    if (!parse_errors.empty()) {
         std::print(std::cerr, "For file '{}':\n", file_name);
 
         for (const auto& [msg, culprit] : parse_errors) {
@@ -25,9 +26,22 @@ using namespace XLang;
         return false;
     }
 
+    Semantics::SemanticsPass sema {source_view};
+    auto [sema_native_hints, sema_errors] = sema(ast);
+
+    if (!sema_errors.empty()) {
+        std::print(std::cerr, "Semantic errors in file '{}':\n", file_name);
+
+        for (const auto& [message, culprit_token] : sema_errors) {
+            std::print(std::cerr, "At [ln {}]\nNote: {}\n\n", culprit_token.line, message);
+        }
+
+        return false;
+    }
+
     Codegen::IRPrinter printer;
-    Codegen::GraphPass gen_graph_pass {source_view};
-    auto ir = gen_graph_pass.process(parse_result.decls);
+    Codegen::GraphPass gen_graph_pass {source_view, &sema_native_hints};
+    auto ir = gen_graph_pass.process(ast);
 
     printer(ir);
 

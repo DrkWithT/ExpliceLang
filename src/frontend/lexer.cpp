@@ -1,11 +1,11 @@
 #include <initializer_list>
-#include <iostream>
 #include "frontend/token.hpp"
 #include "frontend/lexer.hpp"
 
 namespace XLang::Frontend {
     static std::initializer_list<LexicalEntry> entries = {
-        LexicalEntry {"import", LexTag::keyword},
+        LexicalEntry {"use", LexTag::keyword},
+        {"import", LexTag::keyword},
         {"func", LexTag::keyword},
         {"import", LexTag::keyword},
         {"if", LexTag::keyword},
