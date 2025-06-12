@@ -168,7 +168,7 @@ namespace XLang::VM {
 
     Opcode VM::decode_opcode() const noexcept {
         // std::cout << "CHUNK: " << current_frame().callee_id <<  ", IPTR: " << m_iptr << '\n';
-        const auto decoded_op = m_program_funcs.func_chunks.at(current_frame().callee_id).view_code().bytecode.at(m_iptr);
+        const auto decoded_op = m_program_funcs.func_chunks.at(current_frame().callee_id).view_code().bytecode[m_iptr];
 
         return static_cast<Opcode>(decoded_op);
     }
@@ -219,7 +219,7 @@ namespace XLang::VM {
             m_values.push_back(Value {arg});
             break;
         case Codegen::Region::frame_slot:
-            m_values.push_back(current_frame().args.at(arg.id));
+            m_values.push_back(current_frame().args[arg.id]);
             break;
         case Codegen::Region::none:
         default:
@@ -337,12 +337,12 @@ namespace XLang::VM {
                     current_frame().callee_id
                 ).view_code().constants.at(num);
             case Codegen::Region::temp_stack:
-                return m_values.at(current_frame().callee_frame_base + num);
+                return m_values[current_frame().callee_frame_base + num];
             case Codegen::Region::obj_heap:
             case Codegen::Region::routines:
                 return Value {arg};
             case Codegen::Region::frame_slot:
-                return current_frame().args.at(num);
+                return current_frame().args[num];
             case Codegen::Region::none:
                 return m_values.back();
             default:
