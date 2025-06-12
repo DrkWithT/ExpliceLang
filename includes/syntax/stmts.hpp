@@ -23,6 +23,7 @@ namespace XLang::Syntax {
 
         NativeUse(Semantics::TypeInfo typing_, std::vector<ArgDecl> args_, Frontend::Token native_name_) noexcept;
 
+        bool is_directive() const noexcept override;
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;
@@ -36,6 +37,7 @@ namespace XLang::Syntax {
 
         Import(const Frontend::Token& unit_name_) noexcept;
 
+        bool is_directive() const noexcept override;
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;
@@ -52,6 +54,7 @@ namespace XLang::Syntax {
 
         explicit VariableDecl(Semantics::TypeInfo typing_, const Frontend::Token& var_name_, ExprPtr init_expr_, bool readonly_) noexcept;
 
+        bool is_directive() const noexcept override;
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;
@@ -68,6 +71,7 @@ namespace XLang::Syntax {
 
         FunctionDecl(Semantics::TypeInfo typing_, const std::vector<ArgDecl>& args_, const Frontend::Token& name_, StmtPtr body_) noexcept;
 
+        bool is_directive() const noexcept override;
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;
@@ -81,6 +85,7 @@ namespace XLang::Syntax {
 
         ExprStmt(ExprPtr inner_) noexcept;
 
+        bool is_directive() const noexcept override;
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;
@@ -94,6 +99,7 @@ namespace XLang::Syntax {
 
         Block(std::vector<StmtPtr> stmts_) noexcept;
 
+        bool is_directive() const noexcept override;
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;
@@ -107,6 +113,7 @@ namespace XLang::Syntax {
 
         Return(ExprPtr result_expr_) noexcept;
 
+        bool is_directive() const noexcept override;
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;
@@ -122,6 +129,7 @@ namespace XLang::Syntax {
 
         If(ExprPtr test_, StmtPtr truthy_body_, StmtPtr falsy_body_) noexcept;
 
+        bool is_directive() const noexcept override;
         bool is_declarative() const noexcept override;
         bool is_control_flow() const noexcept override;
         bool is_expr_stmt() const noexcept override;

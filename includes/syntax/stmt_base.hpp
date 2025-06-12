@@ -8,6 +8,7 @@ namespace XLang::Syntax {
     struct Stmt {
         virtual ~Stmt() = default;
 
+        virtual bool is_directive() const noexcept = 0;
         virtual bool is_declarative() const noexcept = 0;
         virtual bool is_control_flow() const noexcept = 0;
         virtual bool is_expr_stmt() const noexcept = 0;

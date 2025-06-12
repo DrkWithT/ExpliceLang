@@ -39,7 +39,7 @@ namespace XLang::Frontend {
         }
 
         m_errors.emplace_back("Unexpected token.", peek_at(0));
-        throw std::runtime_error {"SYNTAX ERROR\n"};
+        throw std::logic_error {"SYNTAX ERROR\n"};
     }
 
     void Parser::recover() {
@@ -75,7 +75,7 @@ namespace XLang::Frontend {
         }
 
         m_errors.emplace_back("Invalid literal token!", peek_at(0));
-        throw std::runtime_error {"SYNTAX ERROR\n"};
+        throw std::logic_error {"SYNTAX ERROR\n"};
     }
 
     Syntax::ExprPtr Parser::parse_access() {
@@ -244,7 +244,7 @@ namespace XLang::Frontend {
     }
 
     Syntax::ExprPtr Parser::parse_assign() {
-        auto assign_root = parse_access();
+        auto assign_root = parse_unary();
 
         if (match_at(0, LexTag::symbol_assign)) {
             consume();
@@ -260,7 +260,7 @@ namespace XLang::Frontend {
         while (!at_eof() && m_strikes <= m_max_strikes) {
             try {
                 top_stmts.emplace_back(parse_top_stmt());
-            } catch ([[maybe_unused]] const std::runtime_error& parse_oops) {
+            } catch ([[maybe_unused]] const std::logic_error& parse_oops) {
                 ++m_strikes;
                 recover();
             }
@@ -286,7 +286,7 @@ namespace XLang::Frontend {
         }
 
         m_errors.emplace_back("Invalid keyword for expected top-level statement e.g import, use-native, func-decl.", peek_at(0));
-        throw std::runtime_error {"SYNTAX ERROR\n"};
+        throw std::logic_error {"SYNTAX ERROR\n"};
     }
 
     Syntax::StmtPtr Parser::parse_native_use() {
@@ -294,7 +294,7 @@ namespace XLang::Frontend {
 
         if (auto native_kind = Frontend::peek_lexeme(peek_at(0), m_lexer.view_source()); native_kind != "func") {
             m_errors.emplace_back("Invalid keyword for use-native statement, expected 'func'.", peek_at(0));
-            throw std::runtime_error {"SYNTAX ERROR\n"};
+            throw std::logic_error {"SYNTAX ERROR\n"};
         }
 
         consume();
@@ -319,7 +319,7 @@ namespace XLang::Frontend {
 
         if (peek_lexeme(temp, m_lexer.view_source()) != "import") {
             m_errors.emplace_back("Invalid keyword for expected import.", peek_at(0));
-            throw std::runtime_error {"SYNTAX ERROR\n"};
+            throw std::logic_error {"SYNTAX ERROR\n"};
         }
 
         Token unit_name = peek_at(0);
@@ -337,7 +337,7 @@ namespace XLang::Frontend {
 
         if (peek_lexeme(temp, m_lexer.view_source()) != "func") {
             m_errors.emplace_back("Invalid keyword for expected function decl.", peek_at(0));
-            throw std::runtime_error {"SYNTAX ERROR\n"};
+            throw std::logic_error {"SYNTAX ERROR\n"};
         }
 
         Token func_name = peek_at(0);
@@ -385,7 +385,7 @@ namespace XLang::Frontend {
         // std::cout << "parse_type_specifier(...)\n";
         if (!match_at(0, LexTag::type_specifier)) {
             m_errors.emplace_back("Invalid token for type specifier.", peek_at(0));
-            throw std::runtime_error {"SYNTAX ERROR\n"};
+            throw std::logic_error {"SYNTAX ERROR\n"};
         }
 
         auto peeked_type_specifier = peek_lexeme(peek_at(0), m_lexer.view_source());
@@ -417,7 +417,7 @@ namespace XLang::Frontend {
         }
 
         m_errors.emplace_back("Unrecognized type name- may not be implemented in the compiler.", peek_at(0));
-        throw std::runtime_error {"SYNTAX ERROR\n"};
+        throw std::logic_error {"SYNTAX ERROR\n"};
     }
 
     Syntax::StmtPtr Parser::parse_block() {
@@ -473,11 +473,10 @@ namespace XLang::Frontend {
     }
 
     Syntax::StmtPtr Parser::parse_expr_stmt() {
-        // std::cout << "parse_expr_stmt(...)\n";
-        auto inner_expr = parse_assign();
+        auto inner = parse_assign();
         consume(LexTag::semicolon);
 
-        return std::make_unique<Syntax::ExprStmt>(std::move(inner_expr));
+        return std::make_unique<Syntax::ExprStmt>(std::move(inner));
     }
 
     Syntax::StmtPtr Parser::parse_return() {

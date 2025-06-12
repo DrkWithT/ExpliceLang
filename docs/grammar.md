@@ -12,7 +12,7 @@
 <compare> ::= <equality> (("<" / ">") <equality>)*
 <and> ::= <compare> ("&&" <compare>)*
 <or> ::= <and> ("||" <and>)*
-<assign> ::= <access> ("=" <or>)?
+<assign> ::= <unary> ("=" <or>)?
 <expr> ::= <assign>
 ```
 
@@ -30,7 +30,7 @@
 <block> ::= "{" <nestable-stmt>+ "}"
 <nestable-stmt> ::= <variable-decl> / <expr-stmt> / <return> / <if>
 <variable-decl> ::= ("let" / "const") <identifier> ":" <type-specifier> "=" <or> ";"
-<expr-stmt> ::= <expr> ";"
+<expr-stmt> ::= <assign> ";"
 <return> ::= "return" <or> ";"
 <if> ::= "if" "(" <or> ")" <block> ("else" <block>)?
 ```
