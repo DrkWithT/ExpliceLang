@@ -73,6 +73,7 @@ namespace XLang::Frontend {
         [[nodiscard]] Syntax::StmtPtr parse_expr_stmt();
         [[nodiscard]] Syntax::StmtPtr parse_return();
         [[nodiscard]] Syntax::StmtPtr parse_if();
+        [[nodiscard]] Syntax::StmtPtr parse_while();
 
     public:
         Parser(std::string_view source);
