@@ -59,6 +59,7 @@ namespace XLang::Codegen {
         static constexpr std::array<int, static_cast<std::size_t>(VM::Opcode::last)> m_op_stack_deltas = {
             -100,
             0,
+            -1,
             1,
             -1,
             1,
@@ -160,6 +161,7 @@ namespace XLang::Codegen {
         [[nodiscard]] std::any visit_block(const Syntax::Block& stmt) override;
         [[nodiscard]] std::any visit_return(const Syntax::Return& stmt) override;
         [[nodiscard]] std::any visit_if(const Syntax::If& stmt) override;
+        [[nodiscard]] std::any visit_while(const Syntax::While& stmt) override;
 
         [[nodiscard]] IRStore process(const std::vector<Syntax::StmtPtr>& ast);
     };

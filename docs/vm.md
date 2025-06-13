@@ -12,6 +12,7 @@
 #### Instructions
  - **HALT**
  - **NOOP**
+ - **REPLACE** base-offset
  - **PUSH** value-id
  - **POP** pop-n
  - **PEEK** base-offset

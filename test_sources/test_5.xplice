@@ -1,6 +1,8 @@
+use func printInt(x: int,): int;
+
 func sum_n(n: int,): int {
     let temp: int = n;
-    let ans = 0;
+    let ans: int = 0;
 
     while (temp > 0) {
         ans = ans + temp;
@@ -11,9 +13,10 @@ func sum_n(n: int,): int {
 }
 
 func main(): int {
-    const test = sum_n(10,);
+    const answer: int = sum_n(10,);
+    printInt(answer,);
 
-    if (test != 55) {
+    if (answer != 55) {
         return 1;
     }
 

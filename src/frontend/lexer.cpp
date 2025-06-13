@@ -11,6 +11,7 @@ namespace XLang::Frontend {
         {"if", LexTag::keyword},
         {"else", LexTag::keyword},
         {"return", LexTag::keyword},
+        {"while", LexTag::keyword},
         {"const", LexTag::keyword},
         {"let", LexTag::keyword},
         {"bool", LexTag::type_specifier},

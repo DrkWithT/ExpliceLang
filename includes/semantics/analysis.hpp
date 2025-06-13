@@ -71,6 +71,7 @@ namespace XLang::Semantics {
         std::any visit_block(const Syntax::Block& stmt) override;
         std::any visit_return(const Syntax::Return& stmt) override;
         std::any visit_if(const Syntax::If& stmt) override;
+        std::any visit_while(const Syntax::While& stmt) override;
 
     private:
         struct OpTypeCheckResult {

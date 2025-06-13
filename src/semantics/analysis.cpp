@@ -197,7 +197,7 @@ namespace XLang::Semantics {
                 .column = -1
             });
 
-            throw std::logic_error {""};
+            return {};
         }
 
         const auto real_info = std::any_cast<TypeInfo>(inner_info);
@@ -220,7 +220,7 @@ namespace XLang::Semantics {
                 }
             );
 
-            throw std::logic_error {""};
+            return {};
         }
 
         return inner_info;
@@ -246,7 +246,7 @@ namespace XLang::Semantics {
                 }
             );
 
-            throw std::logic_error {""};
+            return {};
         }
 
         auto lhs_info = std::any_cast<TypeInfo>(lhs_box);
@@ -272,7 +272,7 @@ namespace XLang::Semantics {
                 }
             );
 
-            throw std::logic_error {""};
+            return {};
         }
 
         /// 1. Handle access expr. case...
@@ -311,7 +311,7 @@ namespace XLang::Semantics {
                 }
             );
 
-            throw std::logic_error {""};
+            return {};
         }
 
         if (!std::holds_alternative<CallableType>(callee_box)) {
@@ -329,7 +329,7 @@ namespace XLang::Semantics {
                 }
             );
 
-            throw std::logic_error {""};
+            return {};
         }
 
         auto callee_info = std::get<CallableType>(callee_box);
@@ -351,7 +351,7 @@ namespace XLang::Semantics {
                 }
             );
 
-            throw std::logic_error {""};
+            return {};
         }
 
         for (auto arg_pos = 0UL; arg_pos < argc; ++arg_pos) {
@@ -375,7 +375,7 @@ namespace XLang::Semantics {
                     }
                 );
 
-                throw std::logic_error {""};
+                return {};
             }
         }
 
@@ -481,6 +481,7 @@ namespace XLang::Semantics {
     std::any SemanticsPass::visit_block(const Syntax::Block& stmt) {
         for (const auto& temp_stmt : stmt.stmts) {
             temp_stmt->accept_visitor(*this);
+            ++m_location.line;
         }
 
         return {};
@@ -564,6 +565,53 @@ namespace XLang::Semantics {
 
         if (stmt.falsy_body) {
             stmt.falsy_body->accept_visitor(*this);
+        }
+
+        return {};
+    }
+
+    std::any SemanticsPass::visit_while(const Syntax::While& stmt) {
+        auto test_type = std::any_cast<TypeInfo>(
+            stmt.test->accept_visitor(*this)
+        );
+        auto test_type_str = type_info_to_str(test_type);
+
+        if (!std::holds_alternative<PrimitiveType>(test_type)) {
+            record_diagnosis(
+                std::format(
+                    "Non-primitive condition expression typed as '{}' in while loop, must be bool typed.",
+                    test_type_str
+                ),
+                Frontend::Token {
+                    .tag = Frontend::LexTag::unknown,
+                    .start = -1,
+                    .length = 0,
+                    .line = m_location.line,
+                    .column = -1
+                }
+            );
+
+            return {};
+        }
+
+        auto primitive_info = std::get<PrimitiveType>(test_type);
+
+        if (primitive_info.item_tag != TypeTag::x_type_bool) {
+            record_diagnosis(
+                std::format(
+                    "Invalid primitive type {} of while loop test, must be a boolean.",
+                    test_type_str
+                ),
+                Frontend::Token {
+                    .tag = Frontend::LexTag::unknown,
+                    .start = -1,
+                    .length = 0,
+                    .line = m_location.line,
+                    .column = -1
+                }
+            );
+
+            return {};
         }
 
         return {};
