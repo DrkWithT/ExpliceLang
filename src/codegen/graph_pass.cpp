@@ -151,15 +151,13 @@ namespace XLang::Codegen {
 
     void GraphPass::update_stack_score_delta(const StepUnion& step) {
         const auto step_op = ([](const StepUnion& step) {
-            const auto step_box_tag = step.index();
-
-            if (step_box_tag == 0) {
+            if (std::holds_alternative<NonaryStep>(step)) {
                 return std::get<NonaryStep>(step).op;
-            } else if (step_box_tag == 1) {
+            } else if (std::holds_alternative<UnaryStep>(step)) {
                 return std::get<UnaryStep>(step).op;
-            } else if (step_box_tag == 2) {
+            } else if (std::holds_alternative<BinaryStep>(step)) {
                 return std::get<BinaryStep>(step).op;
-            } else if (step_box_tag == 3) {
+            } else if (std::holds_alternative<TernaryStep>(step)) {
                 return std::get<TernaryStep>(step).op;
             }
 
@@ -191,7 +189,7 @@ namespace XLang::Codegen {
 
         auto& working_node = m_nodes.back();
 
-        if (working_node.index() == 0) {
+        if (std::holds_alternative<Unit>(working_node)) {
             std::get<Unit>(working_node).steps.emplace_back(std::move(step));
         }
     }
@@ -201,6 +199,31 @@ namespace XLang::Codegen {
     }
 
     void GraphPass::commit_nodes_to_graph(bool all_decls_done) {
+        auto set_unit_links = [](Unit& node, int next_id, bool at_last) noexcept {
+            if (at_last) {
+                node.next = -1;
+                return;
+            }
+
+            if (node.next == -1) {
+                node.next = next_id;
+            }
+        };
+
+        auto set_junct_links = [](Juncture& node, int truthy_id, int falsy_id, bool at_last, bool at_pre_last) noexcept {
+            if (!at_last && node.left == -1) {
+                node.left = truthy_id;
+            } else if (at_last) {
+                node.left = -1;
+            }
+
+            if (!at_pre_last && node.right == -1) {
+                node.right = falsy_id;
+            } else if (at_pre_last) {
+                node.right = -1;
+            }
+        };
+
         if (!m_graph) {
             return;
         }
@@ -211,26 +234,20 @@ namespace XLang::Codegen {
             // 1a. Get next node, check if it's a single-child unit / two-child juncture.
             auto& node = m_nodes[node_i];
 
-            if (node.index() == 0) {
+            if (std::holds_alternative<Unit>(node)) {
                 auto& unit_ref = std::get<Unit>(node);
 
                 /// @note 1b. Last node must have no children, so do a conditional child assignment here.
-                unit_ref.next = (node_i < nodes_n - 1)
-                    ? node_i + 1
-                    : dud_offset;
-                
+                set_unit_links(unit_ref, node_i + 1, (node_i >= nodes_n - 1));
+
                 /// @note 2. Connect children as needed.
                 auto curr_id = m_graph->add_node(node);
                 m_graph->connect_neighbor(curr_id, unit_ref.next);
             } else {
                 auto& juncture_ref = std::get<Juncture>(node);
 
-                juncture_ref.left = (node_i < nodes_n - 1)
-                    ? node_i + 1
-                    : dud_offset;
-                juncture_ref.right = (node_i < nodes_n - 2)
-                    ? node_i + 2
-                    : dud_offset;
+                /// 2b. Handle cases of juncture... The looping ones will already have preset links backward to preserve, but unset links will be updated normally.
+                set_junct_links(juncture_ref, node_i + 1, node_i + 2, (node_i >= nodes_n - 1), (node_i >= nodes_n - 2));
 
                 auto curr_id = m_graph->add_node(node);
                 m_graph->connect_neighbor(curr_id, juncture_ref.left, juncture_ref.right);
@@ -696,6 +713,48 @@ namespace XLang::Codegen {
             .steps = {},
             .next = dud_offset
         });
+
+        return {};
+    }
+
+    std::any GraphPass::visit_while(const Syntax::While& stmt) {
+        /// @note: Creates while loop IR... First builds a Juncture with appropriate truthy and falsy "links". Then emits the Unit of the loop body where the truthy path refers back to the test Unit.
+
+        // 1. Generate specific test Unit to jump back towards per iteration.
+        const auto check_unit_id = static_cast<int>(m_nodes.size());
+        const auto check_juncture_id = check_unit_id + 1;
+
+        place_node(Unit {
+            .steps = {},
+            .next = check_juncture_id
+        });
+        stmt.test->accept_visitor(*this);
+        place_step(UnaryStep {
+            .op = VM::Opcode::xop_jump_not_if,
+            .arg_0 = dud_locator
+        });
+
+        // 2. Place branching node to handle the truthy, iterating path vs. falsy, exiting path.
+        const auto body_id = check_juncture_id + 1;
+        place_node(Juncture {
+            .left = body_id,
+            .right = dud_offset // falsy ID depends on nodes created in body visit
+        });
+
+        // 3. Place body node to generate, but this also needs its next link to exit the enclosing loop.
+        place_node(Unit {
+            .steps = {},
+            .next = dud_offset
+        });
+        stmt.body->accept_visitor(*this);
+        place_step(UnaryStep {
+            .op = VM::Opcode::xop_jump,
+            .arg_0 = dud_locator
+        });
+
+        const auto post_loop_id = static_cast<int>(m_nodes.size()) + 1;
+        std::get<Unit>(m_nodes[body_id]).next = post_loop_id;
+        std::get<Juncture>(m_nodes[check_juncture_id]).right = post_loop_id;
 
         return {};
     }

@@ -160,6 +160,7 @@ namespace XLang::Codegen {
         [[nodiscard]] std::any visit_block(const Syntax::Block& stmt) override;
         [[nodiscard]] std::any visit_return(const Syntax::Return& stmt) override;
         [[nodiscard]] std::any visit_if(const Syntax::If& stmt) override;
+        [[nodiscard]] std::any visit_while(const Syntax::While& stmt) override;
 
         [[nodiscard]] IRStore process(const std::vector<Syntax::StmtPtr>& ast);
     };
