@@ -133,6 +133,9 @@ namespace XLang::Codegen {
             /// @note Stores which node IDs were visited.
             std::set<int> visited;
 
+            /// @note stores previous byte location for any back jumps
+            auto prev_temp_patch_pos = 0;
+
             auto emit_opcode = [&result, &byte_total](VM::Opcode opcode) {
                 result.push_back(static_cast<VM::RuntimeByte>(opcode));
                 ++byte_total;
@@ -197,11 +200,18 @@ namespace XLang::Codegen {
                             .jump_patch = dud_num
                         });
                     } else if (hint_mode == PatchMode::patch_mode_while) {
-                        patches.top().jump_patch = hint_start_pos;
+                        patches.top().jump_patch = instruction_pos + 6;
+                        patches.emplace(Backpatch {
+                            .status = PatchStatus::patch_behind,
+                            .jump_pos = instruction_pos,
+                            .jump_patch = dud_num,
+                        });
                     }
                 } else if (passed_op == VM::Opcode::xop_noop) {
                     if (hint_mode == PatchMode::patch_mode_if_else) {
                         patches.top().jump_patch = instruction_pos;
+                    } else if (hint_mode == PatchMode::patch_mode_while) {
+                        patches.top().jump_patch = hint_start_pos;
                     }
                 }
             };
@@ -233,7 +243,6 @@ namespace XLang::Codegen {
                 .unit_emit_start = 0
             });
 
-            /// @todo also check logic to account for nested loops...
             while (!incoming.empty()) {
                 const auto node_id = incoming.top();
                 incoming.pop();
@@ -256,6 +265,9 @@ namespace XLang::Codegen {
                         emit_step(step);
                     }
 
+                    /// @note Save previous byte position in case a while test's position needs to be patched into a jump...
+                    prev_temp_patch_pos = temp_emit_start_pos;
+
                     patch_jump();
 
                     incoming.push(next_id);
@@ -264,15 +276,14 @@ namespace XLang::Codegen {
                     const auto& [truthy_unit_id, falsy_unit_id] = std::get<Juncture>(ir_unit);
 
                     if (!visited.contains(truthy_unit_id) && !visited.contains(falsy_unit_id)) {
-                        patch_hints.top().mode = PatchMode::patch_mode_if_else;
-                        patch_hints.top().unit_emit_start = temp_emit_start_pos;
+                        patch_hints.emplace(prev_temp_patch_pos, PatchMode::patch_mode_if_else);
                     }
+                    /// @todo Add else clause for `do-while` generation... A back-linked juncture implies that kind.
 
                     incoming.push(falsy_unit_id);
                     incoming.push(truthy_unit_id);
                     visited.insert(node_id);
                 }
-
             }
 
             patch_jump();

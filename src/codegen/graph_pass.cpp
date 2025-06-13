@@ -150,19 +150,30 @@ namespace XLang::Codegen {
     }
 
     void GraphPass::update_stack_score_delta(const StepUnion& step) {
-        const auto step_op = ([](const StepUnion& step) {
+        /// @note This accounts for any calls that will pop their various args...
+        auto adjusted_pop_n = 0;
+
+        const auto step_op = ([&adjusted_pop_n](const StepUnion& step) {
             if (std::holds_alternative<NonaryStep>(step)) {
                 return std::get<NonaryStep>(step).op;
             } else if (std::holds_alternative<UnaryStep>(step)) {
                 return std::get<UnaryStep>(step).op;
             } else if (std::holds_alternative<BinaryStep>(step)) {
-                return std::get<BinaryStep>(step).op;
+                const auto& maybe_call = std::get<BinaryStep>(step);
+                adjusted_pop_n = maybe_call.arg_1.id;
+                return maybe_call.op;
             } else if (std::holds_alternative<TernaryStep>(step)) {
+                const auto& maybe_native_call = std::get<TernaryStep>(step);
+                adjusted_pop_n = maybe_native_call.arg_2.id;
                 return std::get<TernaryStep>(step).op;
             }
 
             return VM::Opcode::xop_noop;
         })(step);
+
+        if (step_op == VM::Opcode::xop_call || step_op == VM::Opcode::xop_call_native) {
+            m_stack_score -= adjusted_pop_n;
+        }
 
         const auto opcode_id = static_cast<unsigned int>(step_op);
 
@@ -384,17 +395,16 @@ namespace XLang::Codegen {
             return Frontend::peek_lexeme(name_token, m_old_src);
         })(expr.left.get());
 
-        auto initializer_locator = expr.right->accept_visitor(*this);
+        expr.right->accept_visitor(*this);
 
-        m_current_name_map[lhs_name] = Locator {
-            .region = Region::temp_stack,
-            .id = m_stack_score
-        };
+        const auto lhs_value_locator = m_current_name_map.at(lhs_name);
 
-        return Locator {
-            .region = Region::temp_stack,
-            .id = m_stack_score
-        };
+        place_step(UnaryStep {
+            .op = VM::Opcode::xop_replace,
+            .arg_0 = lhs_value_locator
+        });
+
+        return lhs_value_locator;
     }
 
 
@@ -588,7 +598,7 @@ namespace XLang::Codegen {
         auto var_name = Frontend::peek_lexeme(stmt.name, m_old_src);
         auto var_init_locator = dud_locator;
 
-        if (var_init_box.has_value()) {
+        if (stmt.readonly && var_init_box.has_value()) {
             var_init_locator = std::any_cast<Locator>(var_init_box);
         } else {
             var_init_locator = Locator {
@@ -751,10 +761,18 @@ namespace XLang::Codegen {
             .op = VM::Opcode::xop_jump,
             .arg_0 = dud_locator
         });
+        place_step(NonaryStep {
+            .op = VM::Opcode::xop_noop
+        });
 
-        const auto post_loop_id = static_cast<int>(m_nodes.size()) + 1;
-        std::get<Unit>(m_nodes[body_id]).next = post_loop_id;
+        const auto post_loop_id = static_cast<int>(m_nodes.size());
+        std::get<Unit>(m_nodes[body_id]).next = check_unit_id;
         std::get<Juncture>(m_nodes[check_juncture_id]).right = post_loop_id;
+
+        place_node(Unit {
+            .steps = {},
+            .next = dud_offset
+        });
 
         return {};
     }

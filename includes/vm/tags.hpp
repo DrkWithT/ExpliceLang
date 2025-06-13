@@ -11,6 +11,7 @@ namespace XLang::VM {
     enum class Opcode : unsigned char {
         xop_halt,
         xop_noop,
+        xop_replace,
         xop_push,
         xop_pop,
         xop_peek,

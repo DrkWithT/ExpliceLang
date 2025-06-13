@@ -28,6 +28,7 @@ namespace XLang::VM {
         void push_from_native(Value temp) noexcept;
 
         void handle_halt();
+        void handle_replace(const Codegen::Locator& arg);
         void handle_push(const Codegen::Locator& arg);
         void handle_pop(const Codegen::Locator& arg);
         void handle_peek(const Codegen::Locator& arg);
@@ -48,6 +49,7 @@ namespace XLang::VM {
         static constexpr std::array<int, static_cast<std::size_t>(Opcode::last)> opcode_arity = {
             0,
             0,
+            1,
             1,
             1,
             1,

@@ -1,4 +1,3 @@
-// #include <iostream>
 #include <stdexcept>
 #include <utility>
 #include "vm/vm.hpp"
@@ -71,6 +70,10 @@ namespace XLang::VM {
                 break;
             case Opcode::xop_noop:
                 ++m_iptr;
+                break;
+            case Opcode::xop_replace:
+                handle_replace(op_args[0]);
+                m_iptr += 6;
                 break;
             case Opcode::xop_push:
                 handle_push(op_args[0]);
@@ -199,6 +202,16 @@ namespace XLang::VM {
         m_frames.clear();
     }
 
+    void VM::handle_replace(const Codegen::Locator& arg) {
+        if (arg.region != Codegen::Region::temp_stack) {
+            m_exit_status = Errcode::xerr_temp_stack;
+            throw std::runtime_error {"Illegal argument to REPLACE instruction detected - not a stack locator."};
+        }
+
+        m_values[current_frame().callee_frame_base + arg.id] = m_values.back();
+        m_values.pop_back();
+    }
+
     void VM::handle_push(const Codegen::Locator& arg) {
         switch (arg.region) {
         case Codegen::Region::consts:
@@ -224,7 +237,7 @@ namespace XLang::VM {
         case Codegen::Region::none:
         default:
             m_exit_status = Errcode::xerr_temp_stack;
-            throw std::runtime_error {"Invalid push of un-tagged object."};
+            throw std::runtime_error {"Illegal push of un-tagged object detected."};
             break;
         }
     }
@@ -382,6 +395,7 @@ namespace XLang::VM {
         }
 
         /// NOTE: prepare base value & call state of function frame...
+        const auto base_mark = static_cast<int>(m_values.size());
         m_values.emplace_back(Value {Codegen::Locator {
             .region = Codegen::Region::routines,
             .id = local_func_id.id
@@ -391,7 +405,7 @@ namespace XLang::VM {
             .args = std::move(args),
             .callee_id = local_func_id.id,
             .callee_pos = 0,
-            .callee_frame_base = static_cast<int>(m_values.size()) - 1
+            .callee_frame_base = base_mark
         });
 
         /// NOTE: resume execution at the beginning of the callee's chunk

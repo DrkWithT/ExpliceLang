@@ -59,6 +59,7 @@ namespace XLang::Codegen {
         static constexpr std::array<int, static_cast<std::size_t>(VM::Opcode::last)> m_op_stack_deltas = {
             -100,
             0,
+            -1,
             1,
             -1,
             1,
