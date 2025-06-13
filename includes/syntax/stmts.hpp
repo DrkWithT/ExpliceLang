@@ -137,4 +137,19 @@ namespace XLang::Syntax {
         void accept_visitor(StmtVisitor<void>& visitor) const override;
         std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
     };
+
+    struct While : public Stmt {
+        ExprPtr test;
+        StmtPtr body;
+
+        While(ExprPtr test_, StmtPtr body_) noexcept;
+
+        bool is_directive() const noexcept override;
+        bool is_declarative() const noexcept override;
+        bool is_control_flow() const noexcept override;
+        bool is_expr_stmt() const noexcept override;
+        Semantics::TypeInfo possible_result_type() const noexcept override;
+        void accept_visitor(StmtVisitor<void>& visitor) const override;
+        std::any accept_visitor(StmtVisitor<std::any>& visitor) const override;
+    };
 }

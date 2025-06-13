@@ -9,6 +9,7 @@ namespace XLang::Syntax {
     struct Block;
     struct Return;
     struct If;
+    struct While;
 
     template <typename Result>
     class StmtVisitor {
@@ -23,5 +24,6 @@ namespace XLang::Syntax {
         virtual Result visit_block(const Block& stmt) = 0;
         virtual Result visit_return(const Return& stmt) = 0;
         virtual Result visit_if(const If& stmt) = 0;
+        virtual Result visit_while(const While& stmt) = 0;
     };
 }

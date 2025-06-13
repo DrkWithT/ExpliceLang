@@ -260,4 +260,39 @@ namespace XLang::Syntax {
     std::any If::accept_visitor(StmtVisitor<std::any>& visitor) const {
         return visitor.visit_if(*this);
     }
+
+
+    While::While(ExprPtr test_, StmtPtr body_) noexcept
+    : test {std::move(test_)}, body {std::move(body_)} {}
+
+    bool While::is_directive() const noexcept {
+        return false;
+    }
+
+    bool While::is_declarative() const noexcept {
+        return false;
+    }
+
+    bool While::is_control_flow() const noexcept {
+        return true;
+    }
+
+    bool While::is_expr_stmt() const noexcept {
+        return false;
+    }
+
+    Semantics::TypeInfo While::possible_result_type() const noexcept {
+        return {
+            Semantics::NullType {}
+        };
+    }
+
+    void While::accept_visitor(StmtVisitor<void>& visitor) const {
+        visitor.visit_while(*this);
+    }
+
+    std::any While::accept_visitor(StmtVisitor<std::any>& visitor) const {
+        return visitor.visit_while(*this);
+    }
+
 }
