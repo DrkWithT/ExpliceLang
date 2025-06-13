@@ -14,12 +14,20 @@
 namespace XLang::Codegen {
     inline constexpr auto dud_num = -1;
 
+    enum class PatchMode : unsigned char {
+        patch_mode_if_else,
+        patch_mode_while,
+        patch_mode_none
+    };
+
     enum class PatchStatus : unsigned char {
-        patch_skip_truthy,
-        patch_skip_falsy,
+        patch_skip_truthy, // use for if path
+        patch_skip_falsy,  // use for else path
+        patch_behind,      // use for loops only
         patch_done
     };
 
+    /// @brief Models data for filling control flow jumps.
     struct Backpatch {
         PatchStatus status;
         int jump_pos;
@@ -28,6 +36,12 @@ namespace XLang::Codegen {
         friend constexpr bool patch_usable(const Backpatch& patch) noexcept {
             return patch.jump_pos != dud_num && patch.jump_patch != dud_num;
         }
+    };
+
+    /// @brief Denotes "hints" which tell `EmitCodePass` how a patch will be done within the current section of a CFG. For example, a `while` loop will require backwards patching at the trailing `jump`, but `if-else` statements don't.
+    struct PatchHint {
+        int unit_emit_start;
+        PatchMode mode;
     };
 
     /**
@@ -109,8 +123,13 @@ namespace XLang::Codegen {
 
             /// @note Stores next nodes by ID to emit bytecode for, etc.
             std::stack<int> incoming;
+
+            /// @note Stores patch mode state to handle various control-flow constructs like `if-else` / `while` stmts.
+            std::stack<PatchHint> patch_hints;
+
             /// @note Stores backpatch info for earlier-encountered dud jumps.
             std::stack<Backpatch> patches;
+
             /// @note Stores which node IDs were visited.
             std::set<int> visited;
 
@@ -161,6 +180,8 @@ namespace XLang::Codegen {
                     passed_op = ternary_op;
                 } else {}
 
+                const auto [hint_start_pos, hint_mode] = patch_hints.top();
+
                 if (passed_op == VM::Opcode::xop_jump_not_if) {
                     patches.emplace(Backpatch {
                         .status = PatchStatus::patch_skip_truthy,
@@ -168,18 +189,24 @@ namespace XLang::Codegen {
                         .jump_patch = dud_num
                     });
                 } else if (passed_op == VM::Opcode::xop_jump) {
-                    patches.top().jump_patch = instruction_pos;
-                    patches.emplace(Backpatch {
-                        .status = PatchStatus::patch_skip_falsy,
-                        .jump_pos = instruction_pos,
-                        .jump_patch = dud_num
-                    });
+                    if (hint_mode == PatchMode::patch_mode_if_else) {
+                        patches.top().jump_patch = instruction_pos;
+                        patches.emplace(Backpatch {
+                            .status = PatchStatus::patch_skip_falsy,
+                            .jump_pos = instruction_pos,
+                            .jump_patch = dud_num
+                        });
+                    } else if (hint_mode == PatchMode::patch_mode_while) {
+                        patches.top().jump_patch = hint_start_pos;
+                    }
                 } else if (passed_op == VM::Opcode::xop_noop) {
-                    patches.top().jump_patch = instruction_pos;
+                    if (hint_mode == PatchMode::patch_mode_if_else) {
+                        patches.top().jump_patch = instruction_pos;
+                    }
                 }
             };
 
-            auto patch_jump = [&result, &patches]() {
+            auto patch_jump = [&result, &patch_hints, &patches]() {
                 if (patches.empty()) {
                     return;
                 }
@@ -197,10 +224,16 @@ namespace XLang::Codegen {
                 result[patch_jump_arg_pos + 3] = (patch_jump_arg & 0xff000000) >> 24;
 
                 patches.pop();
+                patch_hints.pop();
             };
 
             incoming.push(0);
+            patch_hints.push(PatchHint {
+                .mode = PatchMode::patch_mode_none,
+                .unit_emit_start = 0
+            });
 
+            /// @todo also check logic to account for nested loops...
             while (!incoming.empty()) {
                 const auto node_id = incoming.top();
                 incoming.pop();
@@ -210,9 +243,14 @@ namespace XLang::Codegen {
                 }
 
                 const auto& ir_unit = ir_steps[node_id];
+                const auto temp_emit_start_pos = static_cast<int>(result.size());
 
                 if (std::holds_alternative<Unit>(ir_unit)) {
                     const auto& [steps, next_id] = std::get<Unit>(ir_unit);
+
+                    if (visited.contains(next_id)) {
+                        patch_hints.top().mode = PatchMode::patch_mode_while;
+                    }
 
                     for (const auto& step : steps) {
                         emit_step(step);
@@ -224,6 +262,11 @@ namespace XLang::Codegen {
                     visited.insert(node_id);
                 } else {
                     const auto& [truthy_unit_id, falsy_unit_id] = std::get<Juncture>(ir_unit);
+
+                    if (!visited.contains(truthy_unit_id) && !visited.contains(falsy_unit_id)) {
+                        patch_hints.top().mode = PatchMode::patch_mode_if_else;
+                        patch_hints.top().unit_emit_start = temp_emit_start_pos;
+                    }
 
                     incoming.push(falsy_unit_id);
                     incoming.push(truthy_unit_id);
