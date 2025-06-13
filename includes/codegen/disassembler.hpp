@@ -18,6 +18,7 @@ namespace XLang::Codegen {
         static constexpr std::array<std::string_view, static_cast<std::size_t>(VM::Opcode::last)> cm_opcode_names = {
             "halt",
             "noop",
+            "replace",
             "push",
             "pop",
             "peek",
@@ -47,6 +48,7 @@ namespace XLang::Codegen {
         static constexpr std::array<int, static_cast<std::size_t>(VM::Opcode::last)> cm_opcode_arities = {
             0,
             0,
+            1,
             1,
             1,
             1,

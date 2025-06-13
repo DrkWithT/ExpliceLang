@@ -499,7 +499,10 @@ namespace XLang::Frontend {
     Syntax::StmtPtr Parser::parse_while() {
         consume();
 
+        consume(LexTag::left_paren);
         auto test_expr = parse_or();
+        consume(LexTag::right_paren);
+
         auto loop_body = parse_block();
 
         return std::make_unique<Syntax::While>(std::move(test_expr), std::move(loop_body));
