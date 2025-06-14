@@ -234,7 +234,10 @@ namespace XLang::Codegen {
                 result[patch_jump_arg_pos + 3] = (patch_jump_arg & 0xff000000) >> 24;
 
                 patches.pop();
-                patch_hints.pop();
+
+                if (!patch_hints.empty()) {
+                    patch_hints.pop();
+                }
             };
 
             incoming.push(0);

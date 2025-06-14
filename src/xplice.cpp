@@ -52,6 +52,8 @@ using namespace XLang;
 }
 
 [[nodiscard]] VM::Errcode native_print_int(VM::VM* vm_p, const VM::ArgStore& argv) {
+    /// @todo: try this since native calls should clean their args...
+    // vm_p->handle_pop({Region::none, static_cast<int>(argv.size())});
     VM::Value target = argv.at(0);
     const auto& target_box = target.inner_box();
 
