@@ -2,7 +2,7 @@
 
 #### Expressions: (add tuples and arrays later!!)
 ```bnf
-<literal> ::= <boolean> | <integer> | <float> | <identifier>
+<literal> ::= <boolean> | <integer> | <float> | <string> | <identifier>
 <access> ::= <literal> ("::" <literal>)
 <call> ::= <identifier> "(" (<expr> ",")* ")"
 <unary> ::= "(" <expr> ")" | "-"? <access> | <call>

@@ -1,13 +1,11 @@
+use func printInt(x: int,): int;
+
+use func printString(s: string,): int;
+
 func main(): int {
-    const original: tuple[int, int] = (42, 24);
-    const x, y = original;
+    let msg: string = "Hello World!";
 
-    const reversed: tuple[int, int] = (y, x);
-    const x2, y2 = reversed;
+    printString(msg,);
 
-    if (x2 == y && y2 == x) {
-        return 0;
-    }
-
-    return 1;
+    return 0;
 }

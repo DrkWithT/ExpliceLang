@@ -5,8 +5,8 @@ Xplice is my first ever stack-bytecode-based language. The goal of this language
 
 ### Philosophy:
  - Explicit behavior is better for understanding.
+    - The code clearly expresses what it does.
  - Feature creep is bad for traction.
- - Concise and clear code helps its maintainability.
 
 ### More Docs:
  - [Grammar](./docs/grammar.md)
@@ -17,8 +17,11 @@ Xplice is my first ever stack-bytecode-based language. The goal of this language
  - **0.2.0** Added some semantic checking to the bytecode compiler.
  - **0.3.0** Some support for native functions added.
  - **0.4.0** While loops somewhat added.
- - **0.4.1?** Add semantic checks to check variable const-ness (cannot reassign or redeclare).
- - **0.5.0?** Two basic optimization passes will be added.
- - **0.6.0?** Sequential types (array, tuple) will be added with a mark-and-sweep GC.
- - **0.7.0?** Add actual strings.
+ - **0.5.0~** Add array types and a stop-the-world GC.
+ - **0.5.1?** Add tuple types.
+ - **0.6.0?** Strings will be added.
+ - **0.7.0?** Add module support.
+ - **0.7.1?** Improve parser error messages.
+ - **0.7.2?** Add `const` checking of variables.
+ - **0.7.3?** Add an optimization pass for pruning dead branches and useless expressions.
  - More versions will be planned...

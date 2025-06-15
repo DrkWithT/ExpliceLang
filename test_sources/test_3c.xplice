@@ -11,9 +11,9 @@ func fib_memo(n: int, a: int, b: int,): int {
 }
 
 func main(): int {
-    const ans: int = fib_memo(4, 1, 1,);
+    const ans: int = fib_memo(29, 1, 1,);
 
-    if (ans != 5) {
+    if (ans != 832040) {
         return 1;
     }
 
