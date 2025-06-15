@@ -51,9 +51,8 @@ using namespace XLang;
     return {std::move(*prgm_ptr)};
 }
 
+
 [[nodiscard]] VM::Errcode native_print_int(VM::VM* vm_p, const VM::ArgStore& argv) {
-    /// @todo: try this since native calls should clean their args...
-    // vm_p->handle_pop({Region::none, static_cast<int>(argv.size())});
     VM::Value target = argv.at(0);
     const auto& target_box = target.inner_box();
 
@@ -65,6 +64,25 @@ using namespace XLang;
     }
 
     std::print("{} ", std::get<int>(target_box));
+
+    vm_p->push_from_native(VM::Value {
+        0
+    });
+    return VM::Errcode::xerr_normal;
+}
+
+[[nodiscard]] VM::Errcode native_print_string(VM::VM* vm_p, const VM::ArgStore& argv) {
+    const VM::Value& target = argv.at(0);
+    const auto& target_box = target.inner_box();
+
+    if (!std::holds_alternative<std::string>(target_box)) {
+        vm_p->push_from_native(VM::Value {
+            1
+        });
+        return VM::Errcode::xerr_general;
+    }
+
+    std::print("{}\n", std::get<std::string>(target_box));
 
     vm_p->push_from_native(VM::Value {
         0
@@ -89,6 +107,7 @@ int main(int argc, char* argv[]) {
     }
 
     VM::NativeFunction wrap_print_int {native_print_int};
+    VM::NativeFunction wrap_print_string {native_print_string};
 
     try {
         /// 1. Initialize VM...
@@ -96,6 +115,7 @@ int main(int argc, char* argv[]) {
 
         /// 2. Register a print function for convenience...
         engine.add_native_function(0, wrap_print_int);
+        engine.add_native_function(1, wrap_print_string);
 
         auto error_status = engine.run();
 
