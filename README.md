@@ -17,9 +17,9 @@ Xplice is my first ever stack-bytecode-based language. The goal of this language
  - **0.2.0** Added some semantic checking to the bytecode compiler.
  - **0.3.0** Some support for native functions added.
  - **0.4.0** While loops somewhat added.
- - **0.5.0~** Add array types and a stop-the-world GC.
- - **0.5.1?** Add tuple types.
- - **0.6.0?** Strings will be added.
+ - **0.5.0** Add string types.
+ - **0.5.1?** Add array and tuple types.
+ - **0.6.0?** Add a stop-the-world GC.
  - **0.7.0?** Add module support.
  - **0.7.1?** Improve parser error messages.
  - **0.7.2?** Add `const` checking of variables.

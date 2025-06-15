@@ -11,6 +11,10 @@
 
 using namespace XLang;
 
+constexpr auto version_major = 0;
+constexpr auto version_minor = 5;
+constexpr auto version_patch = 0;
+
 [[nodiscard]] VM::XpliceProgram compile_source(const char* path_cstr) {
     std::string source_str = Frontend::read_file(path_cstr);
     std::string_view source_sv {source_str};
@@ -102,7 +106,7 @@ int main(int argc, char* argv[]) {
         std::print(std::cout, "usage: xplice [--help | --version | <source-path>]\n");
         return 0;
     } else if (process_arg_sv == "--version") {
-        std::print(std::cout, "Xplice (runtime) v0.4.0\nContributor Link: github.com/DrkWithT\n");
+        std::print(std::cout, "Xplice (runtime) v{}.{}.{}\nContributor Link: github.com/DrkWithT\n", version_major, version_minor, version_patch);
         return 0;
     }
 

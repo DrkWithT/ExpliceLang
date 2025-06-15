@@ -139,9 +139,10 @@ namespace XLang::Frontend {
 
         while (!at_end()) {
             const auto symbol = m_viewed[m_pos];
-            
+
             if (symbol == delim) {
                 update_source_pos(m_viewed[m_pos]);
+                ++m_pos;
                 break;
             }
 
