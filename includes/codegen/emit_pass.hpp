@@ -109,6 +109,9 @@ namespace XLang::Codegen {
                     case 2:
                         const_region[entry_id] = VM::Value {std::get<float>(entry_data)};
                         break;
+                    case 3:
+                        const_region[entry_id] = VM::Value {std::get<std::string>(entry_data)};
+                        break;
                     default:
                         break;
                 }

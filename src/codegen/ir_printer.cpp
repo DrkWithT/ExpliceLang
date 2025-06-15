@@ -59,12 +59,14 @@ namespace XLang::Codegen {
             for (const auto& chunk_entry : const_chunk) {
                 const auto& [entry_value, entry_base_offset] = chunk_entry.second;
 
-                if (entry_value.index() == 0) {
+                if (std::holds_alternative<bool>(entry_value)) {
                     std::print("const-{}: {}\n", entry_base_offset, std::get<bool>(entry_value));
-                } else if (entry_value.index() == 1) {
+                } else if (std::holds_alternative<int>(entry_value)) {
                     std::print("const-{}: {}\n", entry_base_offset, std::get<int>(entry_value));
-                } else if (entry_value.index() == 2) {
+                } else if (std::holds_alternative<float>(entry_value)) {
                     std::print("const-{}: {}\n", entry_base_offset, std::get<float>(entry_value));
+                } else if (std::holds_alternative<std::string>(entry_value)) {
+                    std::print("const-{}: '{}'\n", entry_base_offset, std::get<std::string>(entry_value));
                 }
             }
         };

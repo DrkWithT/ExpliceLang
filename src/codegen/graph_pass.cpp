@@ -453,6 +453,12 @@ namespace XLang::Codegen {
                     .data = std::stof(literal_text),
                     .id = const_primitive_id
                 };
+            } else if (tag == Semantics::TypeTag::x_type_string) {
+                const_primitive_id = next_const_id();
+                m_const_map[literal_lexeme] = {
+                    .data = literal_text,
+                    .id = const_primitive_id
+                };
             }
 
             place_step(UnaryStep {
@@ -477,7 +483,7 @@ namespace XLang::Codegen {
         const auto& expr_token = expr.token;
         auto literal_lexeme = Frontend::peek_lexeme(expr_token, m_old_src);
 
-        if (primitive_tag == Semantics::TypeTag::x_type_bool || primitive_tag == Semantics::TypeTag::x_type_int || primitive_tag == Semantics::TypeTag::x_type_float) {
+        if (primitive_tag == Semantics::TypeTag::x_type_bool || primitive_tag == Semantics::TypeTag::x_type_int || primitive_tag == Semantics::TypeTag::x_type_float || primitive_tag == Semantics::TypeTag::x_type_string) {
             return record_const_primitive(primitive_tag, expr_token);
         } else if (primitive_tag == Semantics::TypeTag::x_type_unknown) {
             /// @note Handle identifiers here...
@@ -491,7 +497,7 @@ namespace XLang::Codegen {
             return name_loc;
         }
 
-        throw std::logic_error {"String codegen unsupported!\n"};
+        throw std::logic_error {"Sequential object codegen unsupported!\n"};
     }
 
     std::any GraphPass::visit_unary(const Syntax::Unary& expr) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <variant>
 #include "codegen/steps.hpp"
 
@@ -9,6 +10,7 @@ namespace XLang::VM {
         primitive_bool,
         primitive_int,
         primitive_float,
+        primitive_string,
         object_array,
         object_tuple,
         last,
@@ -23,12 +25,13 @@ namespace XLang::VM {
 
     struct Value {
     public:
-        using box_type = std::variant<NullValue, bool, int, float, Codegen::Locator>;
+        using box_type = std::variant<NullValue, bool, int, float, std::string, Codegen::Locator>;
 
         Value() noexcept;
         explicit Value(bool b);
         explicit Value(int i);
         explicit Value(float f);
+        explicit Value(std::string s) noexcept;
         explicit Value(Codegen::Locator ref);
 
         [[nodiscard]] ValueTag tag() const noexcept;
@@ -36,6 +39,7 @@ namespace XLang::VM {
 
         [[nodiscard]] bool is_boolean() const noexcept;
         [[nodiscard]] bool is_numeric() const noexcept;
+        [[nodiscard]] bool is_string() const noexcept;
         [[nodiscard]] bool is_object() const noexcept;
         [[nodiscard]] bool is_func_reference() const noexcept;
 

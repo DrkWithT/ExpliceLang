@@ -9,6 +9,7 @@ namespace XLang::VM {
         ValueTag::primitive_bool,
         ValueTag::primitive_int,
         ValueTag::primitive_float,
+        ValueTag::primitive_string,
         ValueTag::object_array,
         ValueTag::object_tuple
     };
@@ -24,6 +25,9 @@ namespace XLang::VM {
 
     Value::Value(float f)
     : m_data {f}, m_tag {value_tags_table[m_data.index()]} {}
+
+    Value::Value(std::string s) noexcept
+    : m_data {std::move(s)}, m_tag {value_tags_table[m_data.index()]} {}
 
     Value::Value(Codegen::Locator ref)
     : m_data {ref}, m_tag {value_tags_table[m_data.index()]} {}
@@ -45,12 +49,16 @@ namespace XLang::VM {
         return m_tag == ValueTag::primitive_int || m_tag == ValueTag::primitive_float;
     }
 
+    bool Value::is_string() const noexcept {
+        return m_tag == ValueTag::primitive_string;
+    }
+
     bool Value::is_object() const noexcept {
         return m_tag == ValueTag::object_array || m_tag == ValueTag::object_tuple;
     }
 
     bool Value::is_func_reference() const noexcept {
-        if (m_data.index() != 4) {
+        if (!std::holds_alternative<Codegen::Locator>(m_data)) {
             return false; // handle non-reference types...
         }
 
@@ -58,21 +66,25 @@ namespace XLang::VM {
     }
 
     Value Value::add(const Value& rhs) const {
-        if (!is_numeric() || !rhs.is_numeric()) {
-            throw std::runtime_error {"Invalid add operands: NaN detected."};
+        if ((!is_numeric() || !rhs.is_numeric()) || (!is_string() || !rhs.is_string())) {
+            throw std::runtime_error {"Invalid add operands: objects lack adding support by type."};
         }
 
         if (m_tag != rhs.tag()) {
-            throw std::runtime_error {"Invalid add operands: mismatched types."};
+            throw std::runtime_error {"Invalid add operands: mismatched objects by type."};
         }
 
         const auto lhs_tag = tag();
 
         if (lhs_tag == ValueTag::primitive_int) {
             return Value {std::get<int>(m_data) + std::get<int>(rhs.m_data)};
-        } else {
+        } else if (lhs_tag == ValueTag::primitive_float) {
             return Value {std::get<float>(m_data) + std::get<float>(m_data)};
+        } else if (lhs_tag == ValueTag::primitive_string) {
+            return Value {std::get<std::string>(m_data) + std::get<std::string>(rhs.m_data)};
         }
+
+        return Value {};
     }
 
     Value Value::subtract(const Value& rhs) const {

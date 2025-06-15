@@ -3,6 +3,7 @@
 #include <memory>
 #include <array>
 #include <any>
+#include <string>
 #include <unordered_map>
 #include <variant>
 #include <vector>
@@ -22,7 +23,7 @@ namespace XLang::Codegen {
     using NameLocatorRecord = std::unordered_map<std::string_view, Locator>;
 
     struct ConstPrimitiveInfo {
-        std::variant<bool, int, float> data;
+        std::variant<bool, int, float, std::string> data;
         int id;
     };
 
